@@ -116,6 +116,44 @@
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
     </Style>
 
+    <!-- Ogohlantirish qutisi (qoidalar: 20 sm / 4 sm) -->
+    <SolidColorBrush x:Key="WarningBackBrush" Color="#FFF4D6"/>
+    <SolidColorBrush x:Key="WarningBorderBrush" Color="#E8B931"/>
+    <SolidColorBrush x:Key="WarningTextBrush" Color="#7A4E00"/>
+    <SolidColorBrush x:Key="NightBrush" Color="#0E1116"/>
+
+    <Style x:Key="WarningBox" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource WarningBackBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource WarningBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="Margin" Value="0,6,0,0"/>
+    </Style>
+
+    <!-- Kunduzi / Kechasi almashtirgich -->
+    <Style x:Key="Segment" TargetType="RadioButton">
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Chrome" Background="White" BorderBrush="{StaticResource CardBorderBrush}"
+                            BorderThickness="1" CornerRadius="4" Padding="10,4" Margin="0,0,4,0">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{StaticResource AccentBrush}"/>
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource AccentDarkBrush}"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Rang namunasi (kichik kvadrat tugma) -->
     <Style x:Key="Swatch" TargetType="Button" BasedOn="{StaticResource BaseButton}">
         <Setter Property="Width" Value="20"/>

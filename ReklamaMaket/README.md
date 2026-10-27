@@ -1,25 +1,78 @@
-# Reklama Maket — CorelDRAW plagini
+# Reklama Maket — CorelDRAW plagini (Channel letters)
 
-Tanlangan logoni tashqi reklama konstruksiyasiga (laytboks, banner, bilbord, pilon...) joylab,
-orqasiga fon chizadi va uni **joyida turgandek** ko'rsatadi: devor yoki ko'cha, yer, soya,
-masshtab uchun odam siluyeti va o'lcham chiziqlari bilan. Panelda 2D (old tomoni) va
-**3D** ko'rinish bor — konstruksiyani chapdan va o'ngdan aylantirib ko'rish mumkin.
+Tanlangan logodan **hajmli harf (channel letters)** dizaynini Corelda chizadi: harf dizayni va
+fon dizayni alohida tanlanadi, o'lchamlar qo'yiladi. Kerak bo'lsa, tayyor dizaynni **ChatGPT**ga
+yuborib, uning kunduzgi va kechki **real ko'rinishini** oladi (har kim o'z API kalitini ulaydi).
 
-## Paneldagi bo'limlar
+## Ish tartibi
 
-| Bo'lim | Nima qiladi |
+1. Corelda logoni belgilang → panelda **Tanlangan logoni olish**.
+2. Logoning haqiqiy **bo'yi**ni kiriting — eni proporsiya bo'yicha o'zi hisoblanadi.
+3. **Harf dizayni** (harf turi, qalinligi, yuz/bort/nur ranglari) va **fon dizayni**ni tanlang.
+   Panel tepasida **Kunduzi / Kechasi** ko'rinishi darhol yangilanadi.
+4. **CORELDA DIZAYN CHIZISH** — yangi sahifada quyidagilar chiziladi:
+   - kunduzgi ko'rinish (fon + harflar + soya);
+   - kechki ko'rinish (nima yonishi: yuz, kontrajur, yon tomon, LED nuqtalar...);
+   - yon kesim sxemasi (yuz, bort, orqa, LED, distansiya, qalinlik);
+   - o'lcham chiziqlari va sarlavha.
+   Hammasi `Ctrl+Z` bilan bitta qadamda bekor qilinadi. Asl logo o'zgarmaydi.
+5. **CHATGPT: REAL KO'RINISH** — dizaynni ChatGPT'ga yuboradi. Plagin joy (bino fasadi) rasmini
+   tanlashni so'raydi: rasm berilsa, belgi shu fasadga qo'yiladi; berilmasa — umumiy fasadda
+   ko'rsatiladi. Natija (kunduzi + kechasi) Corelga qo'shiladi va
+   `Hujjatlar\ReklamaMaket\ChatGPT\<sana>` papkasiga saqlanadi.
+   **"Dizayn chizilgach avtomatik yuborish"** belgilansa, 4-qadamdan keyin o'zi yuboradi.
+
+## Qoidalar (ogohlantirish beriladi)
+
+| Shart | Natija |
 |---|---|
-| **Ko'rinish** (yuqorida, doim ko'rinadi) | 3D sahna: *◀ Chapdan / Old / O'ngdan ▶* tugmalari, burilish va qiyalik slayderlari, sichqoncha bilan aylantirish, g'ildirak bilan yaqinlashtirish, **Kechasi** rejimi (yoritilgan yuz). *Old tomoni (2D)* — logo fon ustida qanday turishi. |
-| **1. Logo** | Corelda belgilangan obyekt(lar)ni logo sifatida oladi, kichik rasm va o'lchamini ko'rsatadi. Asl logo o'zgarmaydi. |
-| **2. Dizayn turi** | Laytboks, Banner, Bilbord, Pilon + har biri uchun tayyor o'lchamlar. |
-| **3. O'lchamlar** | Eni, bo'yi, qalinligi, yerdan balandligi; birlik (mm / sm / m); Corelda chizish masshtabi (1:1 … 1:100). |
-| **4. Logo joylashuvi** | Markazda / chapda / o'ngda / tepada / pastda, chetdan bo'sh joy (%), logo hajmi (%). |
-| **5. Ranglar** | Fon (logo orqasi) va karkas/profil rangi: tayyor namunalar, `#RRGGBB` yoki rang tanlash oynasi. |
-| **6. Qo'shimcha** | Atrof-muhit, odam siluyeti, o'lcham chiziqlari, yangi sahifada yaratish. |
+| Logo bo'yi **20 sm dan past** | Hajmli (3D) va yoritilgan qilib bo'lmaydi — faqat yassi harf |
+| Qalinligi **4 sm dan kam** | Yoritib bo'lmaydi (ichiga LED sig'maydi) |
+| Laytboks fon qalinligi 4 sm dan kam | Fon yoritilmaydi |
 
-**CORELDA MAKET YARATISH** — hammasini Corel hujjatiga vektor obyektlar qilib chizadi
-(bitta guruh, `Ctrl+Z` bilan bitta qadamda bekor qilinadi).
-**3D ko'rinishlarni Corelga qo'shish** — chapdan, old va o'ngdan olingan 3 ta rasmni sahifaga qo'yadi.
+Ogohlantirish panelda sariq qutida ko'rinadi, chizishdan oldin yana so'raladi. Davom etilsa,
+dizayn shu cheklov bilan (yassi va/yoki yoritilmagan holda) chiziladi va ChatGPT so'roviga ham
+shunday yoziladi.
+
+## Harf dizaynlari
+
+| Nomi | English | Nima yonadi |
+|---|---|---|
+| Old tomoni yonadigan | Front-lit channel letters | yuz |
+| Qiya qirrali, old tomoni yonadi | Face-lit letters with bevel edge | yuz |
+| Oq yuz, qora bort | Black & white face-lit letters | yuz |
+| Yaxlit akril, yumaloq qirra | Solid acrylic letters, round edge, fully lit | yuz + yon |
+| Yaxlit rangli akril, to'g'ri qirra | Solid coloured acrylic letters, square edge, fully lit | yuz + yon |
+| Old + orqa yonadigan | Face & halo-lit letters | yuz + kontrajur |
+| Orqadan yonadigan (kontrajur) | Halo-lit (reverse channel) letters | kontrajur |
+| Yon tomoni qisman yonadi | Partial side-lit letters | yonda chiziq |
+| Old + yon qisman yonadi | Face & partial side-lit letters | yuz + yonda chiziq |
+| Yon tomoni to'liq yonadi | Side-lit letters (opaque face) | yon |
+| Hamma tomoni yonadi | Front & side fully lit letters | yuz + yon |
+| Ochiq LED (skelet) | Exposed LED (skeleton) letters | LED nuqtalar |
+| Lampochkali (marquee) | Marquee bulb letters | lampochkalar |
+| Perforatsiyali + cheti yonadi | Perforated pixel-LED letters with lit rim | piksellar + kontur |
+| Naqshli lazer kesma yuz | Laser-cut pattern face letters | naqsh |
+| Akril harf, yoritilmaydi | Non-illuminated acrylic letters on standoffs | — |
+| Metall harf, yoritilmaydi | Non-illuminated metal letters | — |
+
+**Fon dizaynlari:** Fonsiz (to'g'ridan-to'g'ri devorga), Kompozit panel (ACP), Kasseta (bortli panel),
+Laytboks fon (yoritiladigan), Akril plita (distansiyada).
+
+## ChatGPT'ni ulash
+
+1. [platform.openai.com/api-keys](https://platform.openai.com/api-keys) sahifasida API kalit yarating
+   (panelda **API kalit olish →** havolasi shu sahifani ochadi).
+2. OpenAI hisobingizda **Billing** (to'lov) yoqilgan bo'lishi kerak — har bir rasm uchun sizning hisobingizdan
+   to'lanadi. Rasm modellari uchun ba'zan tashkilotni tasdiqlash
+   ([Organization verification](https://platform.openai.com/settings/organization/general)) ham so'raladi.
+3. Kalitni panelga kiritib, **Saqlash** → **Tekshirish**. Kalit faqat shu kompyuterda, Windows foydalanuvchingiz
+   uchun shifrlangan holda saqlanadi (`%APPDATA%\ReklamaMaket\settings.json`).
+
+Standart model — `gpt-image-2`; ro'yxatda `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`,
+`chatgpt-image-latest` ham bor, yangi model nomini qo'lda yozish mumkin. **So'rov (prompt)** maydonini
+o'zgartirsangiz saqlanib qoladi; **Standart** tugmasi asl matnni qaytaradi. Harf/fon turi, o'lcham,
+qoidalar va kunduzi/kechasi so'rovga avtomatik qo'shiladi.
 
 ## O'rnatish
 
@@ -27,79 +80,47 @@ Talablar: Windows 10/11, CorelDRAW X7 yoki yangisi (64-bit), hamda bittasi:
 [.NET SDK](https://dotnet.microsoft.com/download) **yoki** Visual Studio 2022 (".NET desktop development").
 
 1. CorelDRAW'ni yoping.
-2. `ReklamaMaket\build.bat` faylini ikki marta bosing. Skript:
-   - CorelDRAW o'rnatilgan papkani topadi (bir nechta bo'lsa, so'raydi);
-   - plaginni yig'adi;
-   - `...\Programs64\Addons\ReklamaMaket\` papkasiga nusxalaydi (administrator ruxsatini so'raydi).
-3. CorelDRAW'ni oching: asosiy menyuda **Reklama → Reklama Maket** yoki standart asboblar
-   panelining oxiridagi **Reklama Maket** tugmasi.
+2. `ReklamaMaket\build.bat` ni ikki marta bosing — skript Corel'ni topadi, plaginni yig'adi va
+   `...\Programs64\Addons\ReklamaMaket\` papkasiga nusxalaydi (administrator ruxsatini so'raydi).
+3. CorelDRAW'ni oching: **Reklama → Reklama Maket** menyusi yoki standart asboblar panelidagi tugma.
+   Ko'rinmasa — CorelDRAW'ni **F8** bosib turgan holda ishga tushiring.
 
-Menyu/tugma ko'rinmasa — CorelDRAW'ni **F8** tugmasini bosib turgan holda ishga tushiring
-(workspace yangilanadi) yoki *Tools → Options → Customization → Commands* dan "Reklama Maket"
-buyrug'ini istalgan panelga sudrab qo'ying.
-
-Qo'shimcha: `build.bat -CorelPath "C:\...\Programs64"` — papkani qo'lda berish,
-`build.bat -NoInstall` — faqat yig'ish, `build.bat -Uninstall` — o'chirish.
-
-## Ishlatish
-
-1. Corelda logoni belgilang → panelda **Tanlangan logoni olish**.
-2. **Dizayn turi** va **tayyor o'lcham**ni tanlang (yoki o'lchamni qo'lda kiriting).
-3. Logo joylashuvi va fon rangini sozlang — yuqoridagi 3D/2D ko'rinish darhol yangilanadi.
-4. **CORELDA MAKET YARATISH** — yangi sahifada (yoki logoning o'ng tomonida) maket paydo bo'ladi.
+Qo'shimcha: `build.bat -CorelPath "C:\...\Programs64"`, `build.bat -NoInstall`, `build.bat -Uninstall`.
 
 ## Loyiha tuzilishi
 
 ```
 ReklamaMaket/
-├── build.bat, build.ps1          yig'ish va o'rnatish
-├── ReklamaMaket.sln
+├── build.bat, build.ps1            yig'ish va o'rnatish
 └── src/ReklamaMaket/
-    ├── AppUI.xslt, UserUI.xslt   Corel paneli, menyu va tugma e'loni
-    ├── CorelDrw.addon            "bu CorelDRAW plagini" belgisi (bo'sh fayl)
-    ├── DockerUI.xaml(.cs)        panel (oyna) va uning mantig'i
-    ├── Styles/Theme.xaml         panel ranglari va uslublari
-    ├── Designs/                  dizayn turlari — har biri alohida fayl
-    ├── Model/                    maket modeli (qismlar, atrof-muhit)
-    ├── Rendering/                2D yuz rasmi, 3D sahna, Corelda chizish
-    └── Core/                     sozlamalar, logo olish, yordamchilar
+    ├── AppUI.xslt, UserUI.xslt     Corel paneli, menyu va tugma
+    ├── DockerUI.xaml(.cs)          panel
+    ├── Styles/Theme.xaml           panel ranglari va uslublari
+    ├── Designs/LetterStyle.cs      harf dizaynlari ro'yxati
+    ├── Designs/BackgroundStyle.cs  fon dizaynlari ro'yxati
+    ├── Core/                       sozlamalar, qoidalar (SignRules), logo olish/eksport
+    ├── Rendering/                  Corelda chizish va paneldagi ko'rinish
+    └── Ai/                         ChatGPT (OpenAI Images API) va so'rov matni
 ```
 
-## Yangi dizayn turi qo'shish
+## Yangi harf turi qo'shish
 
-Har bir tur — `Designs/` papkasidagi bitta klass. Konstruksiya qutilardan (`Part`) yig'iladi;
-o'lchamlar millimetrda, yer sathi `Y = 0`, devor yuzasi `Z = 0`, konstruksiya `X = 0` atrofida.
-Shu ma'lumotdan ham Corel chizmasi, ham 3D model avtomatik quriladi.
+`Designs/LetterStyle.cs` dagi `LetterStyles.All` ro'yxatiga bitta element qo'shing — panel,
+Corel chizmasi, kechki ko'rinish, kesim va ChatGPT so'rovi avtomatik ishlaydi:
 
 ```csharp
-public sealed class VyveskaDesign : DesignType
-{
-    public override string Name => "Vyveska";
-    public override string Description => "Kirish ustidagi panel.";
-    public override SceneKind Scene => SceneKind.Facade;     // yoki SceneKind.Street
-    public override Color DefaultFrameColor => Color.FromRgb(0x40, 0x40, 0x40);
-    public override SizePreset[] Presets => new[]
-    {
-        //             nomi              eni   bo'yi qalinligi balandligi
-        new SizePreset("4000 × 700 mm", 4000, 700, 60, 2600),
-    };
-
-    public override void Build(SignModel model)
-    {
-        var s = model.Settings;
-        // Logo turadigan yuz — albatta model.Face ga yoziladi
-        model.Face = model.Add(new Part("Yuz", PartKind.Face,
-            -s.Width / 2, s.Elevation, 0, s.Width, s.Height, s.Depth, s.FrameColor) { CastsShadow = true });
-    }
-}
+new LetterStyle("Neon chiziqli", "Neon-trim letters",
+    "Harf cheti bo'ylab neon lenta.",
+    LightZones.Rim,                 // nima yonadi (Face, Halo, SideFull, SidePartial, Rim, Dots, Pattern)
+    FaceMaterial.Metal,             // yuz materiali
+    Rgb(0x222222), Rgb(0x222222), Rgb(0xFF2DCE), // yuz, bort, nur ranglari
+    6, 50,                          // ko'rinadigan chet (mm), standart qalinlik (mm)
+    "Yuz: metall", "Bort: metall + neon",
+    "letters with a glowing neon strip along the outline"), // ChatGPT uchun tavsif
 ```
-
-So'ng `Designs/DesignCatalog.cs` ro'yxatiga `new VyveskaDesign(),` qatorini qo'shing va `build.bat` ni qayta ishga tushiring.
 
 ## Muammolar
 
-- **Panel bo'sh ochiladi** — `Addons\ReklamaMaket` dagi fayllar internetdan kelgan deb bloklangan bo'lishi mumkin:
-  har bir faylning *Properties → Unblock* belgisini qo'ying (build.bat buni o'zi qiladi) va Corelni qayta oching.
-- **Menyu ko'rinmaydi** — CorelDRAW'ni F8 bilan ishga tushiring.
-- **Boshqa CorelDRAW versiyasiga o'tdingiz** — `build.bat` ni qayta ishga tushirib, yangi versiyani tanlang.
-- **"Logo topilmadi"** — logo o'chirilgan; uni qayta belgilab, *Tanlangan logoni olish* ni bosing.
+- **Panel bo'sh** — `Addons\ReklamaMaket` dagi fayllarni *Properties → Unblock* qiling (build.bat buni o'zi qiladi).
+- **"Logoni yaxlit konturga aylantirib bo'lmadi"** — logoda rasm (bitmap) bor; avval *Trace Bitmap* qiling.
+- **ChatGPT 401** — kalit noto'g'ri; **403** — tashkilotni tasdiqlash kerak; **429** — limit yoki balans tugagan.

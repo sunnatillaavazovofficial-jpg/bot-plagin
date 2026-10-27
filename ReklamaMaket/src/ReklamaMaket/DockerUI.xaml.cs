@@ -1,17 +1,19 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Media.Media3D;
+using System.Windows.Navigation;
 using System.Windows.Threading;
+using ReklamaMaket.Ai;
 using ReklamaMaket.Core;
 using ReklamaMaket.Designs;
-using ReklamaMaket.Model;
 using ReklamaMaket.Rendering;
 using corel = Corel.Interop.VGCore;
 using Forms = System.Windows.Forms;
@@ -24,44 +26,50 @@ namespace ReklamaMaket
     /// </summary>
     public partial class DockerUI : UserControl
     {
+        private const int AiImagePixels = 1536;
+        private const long MaxPhotoBytes = 45L * 1024 * 1024;
+
         private static readonly Color[] BackgroundPresets =
         {
             Colors.White,
-            Color.FromRgb(0x1F, 0x23, 0x28),
-            Color.FromRgb(0xE3, 0x06, 0x13),
-            Color.FromRgb(0x00, 0x57, 0xB8),
-            Color.FromRgb(0xFF, 0xD4, 0x00),
-            Color.FromRgb(0x00, 0x96, 0x3F),
-            Color.FromRgb(0xF2, 0x8C, 0x00),
-            Color.FromRgb(0x6C, 0x2C, 0x91),
-            Color.FromRgb(0x8A, 0x8D, 0x91),
+            ColorMath.Rgb(0x1E2430),
+            ColorMath.Rgb(0x111111),
+            ColorMath.Rgb(0xD8CFC2),
+            ColorMath.Rgb(0xE30613),
+            ColorMath.Rgb(0x0057B8),
+            ColorMath.Rgb(0xFFD400),
+            ColorMath.Rgb(0x00963F),
+            ColorMath.Rgb(0x8A8D91),
         };
 
-        private static readonly string[] ViewLabels = { "Chapdan", "Old tomondan", "O'ngdan" };
-        private static readonly double[] ViewAngles = { -35, 0, 35 };
+        private static readonly Color[] LightPresets =
+        {
+            Colors.White,              // sovuq oq 6500K
+            ColorMath.Rgb(0xFFC861),   // iliq oq 3000K
+            ColorMath.Rgb(0xFF3B30),
+            ColorMath.Rgb(0x2F7BFF),
+            ColorMath.Rgb(0x34C759),
+            ColorMath.Rgb(0xFF2DCE),
+        };
 
         private readonly corel.Application corelApp;
         private readonly CorelService corelService;
+        private readonly AppSettings appSettings;
         private readonly DispatcherTimer refreshTimer;
-        private readonly AxisAngleRotation3D yawRotation = new AxisAngleRotation3D(new Vector3D(0, 1, 0), 0);
-        private readonly AxisAngleRotation3D pitchRotation = new AxisAngleRotation3D(new Vector3D(1, 0, 0), 0);
-        private readonly PerspectiveCamera camera = new PerspectiveCamera
-        {
-            LookDirection = new Vector3D(0, 0, -1),
-            UpDirection = new Vector3D(0, 1, 0),
-            FieldOfView = 40
-        };
 
-        private DesignType design;
-        private LengthUnit unit = LengthUnit.Millimeter;
         private LogoInfo logo;
+        private DrawResult lastResult;
+        private LengthUnit unit = LengthUnit.Millimeter;
+        private double logoAspect; // eni / bo'yi; 0 — logo hali olinmagan
+        private Color faceColor = Colors.White;
+        private Color returnColor = Colors.Gray;
+        private Color lightColor = Colors.White;
         private Color backgroundColor = Colors.White;
-        private Color frameColor = Colors.Gray;
-        private Scene3D scene;
+        private string photoPath;
+        private string lastAiFolder;
+        private CancellationTokenSource aiCancel;
         private bool suppressEvents = true;
         private bool showingValidationError;
-        private Point? dragStart;
-        private double zoom = 1.0;
 
         public DockerUI(object app)
         {
@@ -69,6 +77,7 @@ namespace ReklamaMaket
 
             corelApp = app as corel.Application;
             corelService = new CorelService(corelApp);
+            appSettings = AppSettings.Load();
 
             refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
             refreshTimer.Tick += (sender, e) =>
@@ -77,12 +86,22 @@ namespace ReklamaMaket
                 RefreshPreview();
             };
 
-            Setup3D();
+            ApiKeyLink.NavigateUri = new Uri(OpenAiImageClient.ApiKeysUrl);
             SetupLists();
-            UpdateSliderTexts();
+            LoadAiSettings();
+
+            WriteLength(LogoHeightBox, 600);
+            WriteLength(LogoWidthBox, 2000);
+            WriteLength(MarginBox, 150);
+            UpdateUnitTexts();
+
+            LetterCombo.SelectedIndex = 0;
+            BackgroundCombo.SelectedIndex = 0;
+            ApplyLetterStyle(LetterStyles.All[0]);
+            ApplyBackgroundStyle(BackgroundStyles.All[0]);
 
             suppressEvents = false;
-            DesignCombo.SelectedIndex = 0;
+            RefreshPreview();
 
             if (corelApp == null)
                 SetStatus("CorelDRAW bilan bog'lanib bo'lmadi (VGCore).", true);
@@ -90,30 +109,20 @@ namespace ReklamaMaket
                 SetStatus("Corelda logoni belgilang va \"Tanlangan logoni olish\" tugmasini bosing.", false);
         }
 
-        private TextBox[] SizeBoxes => new[] { WidthBox, HeightBox, DepthBox, ElevationBox };
-
-        // ------------------------------------------------------------------ boshlang'ich sozlash
-
-        private void Setup3D()
+        private TextBox[] LengthBoxes => new[]
         {
-            Viewport.Camera = camera;
+            LogoHeightBox, LogoWidthBox, DepthBox, BackgroundWidthBox, BackgroundHeightBox, MarginBox, BackgroundDepthBox
+        };
 
-            var rotation = new Transform3DGroup();
-            rotation.Children.Add(new RotateTransform3D(yawRotation));
-            rotation.Children.Add(new RotateTransform3D(pitchRotation));
-            SceneVisual.Transform = rotation;
-
-            yawRotation.Angle = -YawSlider.Value;
-            pitchRotation.Angle = PitchSlider.Value;
-        }
+        // ================================================================ boshlang'ich sozlash
 
         private void SetupLists()
         {
-            DesignCombo.ItemsSource = DesignCatalog.All;
+            LetterCombo.ItemsSource = LetterStyles.All;
+            BackgroundCombo.ItemsSource = BackgroundStyles.All;
 
             UnitCombo.ItemsSource = LengthUnit.All;
             UnitCombo.SelectedItem = unit;
-            UpdateUnitTexts();
 
             ScaleCombo.ItemsSource = new[] { 1, 5, 10, 20, 50, 100 };
             ScaleCombo.SelectedItem = 10;
@@ -128,82 +137,127 @@ namespace ReklamaMaket
             };
             AlignCombo.SelectedIndex = 0;
 
-            var swatchStyle = (Style)FindResource("Swatch");
-            foreach (Color color in BackgroundPresets)
+            AddSwatches(BackgroundSwatches, BackgroundPresets, "Background");
+            AddSwatches(LightSwatches, LightPresets, "Light");
+        }
+
+        private void AddSwatches(Panel panel, IEnumerable<Color> colors, string target)
+        {
+            var style = (Style)FindResource("Swatch");
+            foreach (Color color in colors)
             {
                 var swatch = new Button
                 {
-                    Style = swatchStyle,
+                    Style = style,
                     Background = new SolidColorBrush(color),
-                    ToolTip = ToHex(color),
-                    Tag = color
+                    ToolTip = ColorMath.ToHex(color),
+                    Tag = new KeyValuePair<string, Color>(target, color)
                 };
-                swatch.Click += BackgroundSwatch_Click;
-                BackgroundSwatches.Children.Add(swatch);
+                swatch.Click += Swatch_Click;
+                panel.Children.Add(swatch);
             }
-
-            UpdateColorControls();
         }
 
-        private void ApplyDesign(DesignType newDesign)
+        private void ApplyLetterStyle(LetterStyle style)
         {
-            design = newDesign;
-            frameColor = newDesign.DefaultFrameColor;
+            faceColor = style.FaceColor;
+            returnColor = style.ReturnColor;
+            lightColor = style.LightColor;
 
+            bool previous = suppressEvents;
             suppressEvents = true;
             try
             {
-                DesignDescription.Text = newDesign.Description;
-                PresetCombo.ItemsSource = newDesign.Presets;
-                PresetCombo.SelectedIndex = 0;
-                WriteSizes(newDesign.Presets[0]);
+                WriteLength(DepthBox, style.DefaultDepth);
+                LetterDescription.Text = style.Description + (style.Illuminated ? string.Empty : " Yoritilmaydi.");
+                LightButton.IsEnabled = style.Illuminated;
+                LightHex.IsEnabled = style.Illuminated;
+                LightSwatches.IsEnabled = style.Illuminated;
                 UpdateColorControls();
             }
             finally
             {
-                suppressEvents = false;
+                suppressEvents = previous;
+            }
+            ScheduleRefresh();
+        }
+
+        private void ApplyBackgroundStyle(BackgroundStyle style)
+        {
+            backgroundColor = style.DefaultColor;
+
+            bool previous = suppressEvents;
+            suppressEvents = true;
+            try
+            {
+                WriteLength(BackgroundDepthBox, style.DefaultDepth);
+                BackgroundDescription.Text = style.Description;
+                AutoSizeCheck.IsEnabled = style.Kind != BackgroundKind.Wall;
+                UpdateBackgroundSizeEnabled();
+                UpdateColorControls();
+            }
+            finally
+            {
+                suppressEvents = previous;
+            }
+            ScheduleRefresh();
+        }
+
+        private void UpdateBackgroundSizeEnabled()
+        {
+            var background = BackgroundCombo.SelectedItem as BackgroundStyle;
+            bool manual = background != null && background.Kind != BackgroundKind.Wall && AutoSizeCheck.IsChecked != true;
+            BackgroundWidthBox.IsEnabled = manual;
+            BackgroundHeightBox.IsEnabled = manual;
+        }
+
+        // ================================================================ sozlamalarni o'qish/yozish
+
+        private void WriteLength(TextBox box, double mm) => box.Text = Num.Format(Math.Round(unit.FromMm(mm), 3));
+
+        private SignSettings ReadSettings(out string error)
+        {
+            if (!ReadLength(LogoHeightBox, "Logo bo'yi", 10, out double logoHeight, out error) ||
+                !ReadLength(LogoWidthBox, "Logo eni", 10, out double logoWidth, out error) ||
+                !ReadLength(DepthBox, "Qalinligi", 1, out double depth, out error) ||
+                !ReadLength(MarginBox, "Chetdan joy", 0, out double margin, out error) ||
+                !ReadLength(BackgroundDepthBox, "Fon qalinligi", 0, out double backgroundDepth, out error))
+            {
+                return null;
             }
 
-            RefreshPreview();
-        }
-
-        // ------------------------------------------------------------------ sozlamalarni o'qish/yozish
-
-        private void WriteSizes(SizePreset preset)
-        {
-            WidthBox.Text = Num.Format(unit.FromMm(preset.Width));
-            HeightBox.Text = Num.Format(unit.FromMm(preset.Height));
-            DepthBox.Text = Num.Format(unit.FromMm(preset.Depth));
-            ElevationBox.Text = Num.Format(unit.FromMm(preset.Elevation));
-            foreach (TextBox box in SizeBoxes)
-                box.ClearValue(BorderBrushProperty);
-        }
-
-        private MockupSettings ReadSettings(out string error)
-        {
-            if (!ReadLength(WidthBox, "Eni", 50, out double width, out error) ||
-                !ReadLength(HeightBox, "Bo'yi", 50, out double height, out error) ||
-                !ReadLength(DepthBox, "Qalinligi", 1, out double depth, out error) ||
-                !ReadLength(ElevationBox, "Yerdan balandligi", 0, out double elevation, out error))
+            var background = BackgroundCombo.SelectedItem as BackgroundStyle ?? BackgroundStyles.All[0];
+            bool auto = AutoSizeCheck.IsChecked == true || background.Kind == BackgroundKind.Wall;
+            double backgroundWidth = 0, backgroundHeight = 0;
+            if (!auto &&
+                (!ReadLength(BackgroundWidthBox, "Fon eni", 10, out backgroundWidth, out error) ||
+                 !ReadLength(BackgroundHeightBox, "Fon bo'yi", 10, out backgroundHeight, out error)))
             {
                 return null;
             }
 
             var align = AlignCombo.SelectedItem as Choice<LogoAlign>;
-            return new MockupSettings
+            return new SignSettings
             {
-                Width = width,
-                Height = height,
+                Letter = LetterCombo.SelectedItem as LetterStyle ?? LetterStyles.All[0],
+                LogoWidth = logoWidth,
+                LogoHeight = logoHeight,
                 Depth = depth,
-                Elevation = elevation,
-                MarginPercent = MarginSlider.Value,
-                LogoSizePercent = LogoSizeSlider.Value,
+                FaceColor = faceColor,
+                ReturnColor = returnColor,
+                LightColor = lightColor,
+                KeepLogoColors = KeepColorsCheck.IsChecked == true,
+                Background = background,
+                BackgroundColor = backgroundColor,
+                AutoBackgroundSize = auto,
+                BackgroundWidth = backgroundWidth,
+                BackgroundHeight = backgroundHeight,
+                BackgroundDepth = backgroundDepth,
+                Margin = margin,
                 Align = align != null ? align.Value : LogoAlign.Center,
-                Background = backgroundColor,
-                FrameColor = frameColor,
                 Scale = ScaleCombo.SelectedItem is int scale ? scale : 10,
-                DrawEnvironment = EnvironmentCheck.IsChecked == true,
-                DrawPerson = PersonCheck.IsChecked == true,
+                DrawNight = NightCheck.IsChecked == true,
+                DrawSection = SectionCheck.IsChecked == true,
                 DrawDimensions = DimensionsCheck.IsChecked == true,
                 NewPage = NewPageCheck.IsChecked == true
             };
@@ -215,7 +269,9 @@ namespace ReklamaMaket
             error = null;
 
             if (!Num.TryParse(box.Text, out double value))
+            {
                 error = name + ": son kiriting.";
+            }
             else
             {
                 mm = unit.ToMm(value);
@@ -235,7 +291,7 @@ namespace ReklamaMaket
             return true;
         }
 
-        // ------------------------------------------------------------------ ko'rinishni yangilash
+        // ================================================================ ko'rinish
 
         private void ScheduleRefresh()
         {
@@ -248,10 +304,7 @@ namespace ReklamaMaket
 
         private void RefreshPreview()
         {
-            if (design == null)
-                return;
-
-            MockupSettings settings = ReadSettings(out string error);
+            SignSettings settings = ReadSettings(out string error);
             if (settings == null)
             {
                 SetStatus(error, true);
@@ -265,73 +318,42 @@ namespace ReklamaMaket
                 showingValidationError = false;
             }
 
+            RuleResult rules = SignRules.Check(settings);
+            bool night = NightRadio.IsChecked == true;
             try
             {
-                SignModel model = SceneBuilder.Build(design, settings);
-                BitmapSource face = FaceRenderer.Render(model, logo);
-                FacePreview.Source = face;
-
-                bool night = NightCheck.IsChecked == true;
-                scene = Scene3DBuilder.Build(model, face, night);
-                SceneVisual.Content = scene.Model;
-                LightsVisual.Content = Scene3DBuilder.BuildLights(night);
-                ViewHost.Background = SkyBrush(night);
-                UpdateCamera();
-
-                SizeInfoText.Text = string.Format("Bosma maydon (yuz): {0} × {1} mm",
-                    Num.Format(Math.Round(model.Face.W)), Num.Format(Math.Round(model.Face.H)));
+                PreviewBox.Child = PreviewBuilder.Build(settings, rules, logo, night);
             }
             catch (Exception ex)
             {
                 SetStatus("Ko'rinishni chizishda xato: " + ex.Message, true);
             }
+            PreviewHost.Background = (Brush)FindResource(night ? "NightBrush" : "CheckerBrush");
 
-            UpdateSliderTexts();
-        }
+            SignLayout layout = LogoLayout.Compute(settings);
+            SizeInfoText.Text = string.Format("Logo {0} × {1} mm · fon {2} × {3} mm · qalinligi {4} mm",
+                Num.Format(Math.Round(settings.LogoWidth)), Num.Format(Math.Round(settings.LogoHeight)),
+                Num.Format(Math.Round(layout.BackgroundWidth)), Num.Format(Math.Round(layout.BackgroundHeight)),
+                Num.Format(settings.Depth));
 
-        private void UpdateCamera()
-        {
-            if (scene == null)
-                return;
+            WarningBox.Visibility = rules.HasWarnings ? Visibility.Visible : Visibility.Collapsed;
+            WarningText.Text = string.Join("\n", rules.Warnings.Select(w => "⚠ " + w));
 
-            double aspect = ViewHost.ActualWidth > 1 && ViewHost.ActualHeight > 1
-                ? ViewHost.ActualWidth / ViewHost.ActualHeight
-                : 1.5;
-            double tan = Math.Tan(camera.FieldOfView * Math.PI / 360);
-
-            // Burilganda chuqurlik ham eniga qo'shiladi
-            double radius = Math.Sqrt(scene.HalfWidth * scene.HalfWidth + scene.HalfDepth * scene.HalfDepth);
-            double distance = Math.Max(radius / tan, scene.HalfHeight * aspect / tan) * 1.15 + scene.HalfDepth;
-            camera.Position = new Point3D(0, 0, distance * zoom);
-        }
-
-        private static Brush SkyBrush(bool night)
-        {
-            var brush = night
-                ? new LinearGradientBrush(Color.FromRgb(0x0B, 0x14, 0x26), Color.FromRgb(0x22, 0x2E, 0x48), 90)
-                : new LinearGradientBrush(Color.FromRgb(0x8E, 0xC1, 0xEA), Color.FromRgb(0xEE, 0xF6, 0xFC), 90);
-            brush.Freeze();
-            return brush;
-        }
-
-        private void UpdateSliderTexts()
-        {
-            // InitializeComponent vaqtida slayderlar hodisa chiqaradi, bu matnlar hali yaratilmagan bo'ladi
-            if (LogoSizeValueText == null)
-                return;
-
-            YawValueText.Text = Math.Round(YawSlider.Value) + "°";
-            PitchValueText.Text = Math.Round(PitchSlider.Value) + "°";
-            MarginValueText.Text = Math.Round(MarginSlider.Value) + "%";
-            LogoSizeValueText.Text = Math.Round(LogoSizeSlider.Value) + "%";
+            if (settings.AutoBackgroundSize)
+            {
+                // Qo'lda o'lchamga o'tilganda shu qiymatlardan boshlanadi
+                bool previous = suppressEvents;
+                suppressEvents = true;
+                WriteLength(BackgroundWidthBox, layout.BackgroundWidth);
+                WriteLength(BackgroundHeightBox, layout.BackgroundHeight);
+                suppressEvents = previous;
+            }
         }
 
         private void UpdateUnitTexts()
         {
-            WidthUnitText.Text = unit.Name;
-            HeightUnitText.Text = unit.Name;
-            DepthUnitText.Text = unit.Name;
-            ElevationUnitText.Text = unit.Name;
+            foreach (TextBlock label in new[] { LogoHeightUnit, LogoWidthUnit, DepthUnit, BackgroundWidthUnit, BackgroundHeightUnit, MarginUnit, BackgroundDepthUnit })
+                label.Text = unit.Name;
         }
 
         private void UpdateColorControls()
@@ -340,10 +362,12 @@ namespace ReklamaMaket
             suppressEvents = true;
             try
             {
-                BackgroundButton.Background = new SolidColorBrush(backgroundColor);
-                FrameButton.Background = new SolidColorBrush(frameColor);
-                BackgroundHex.Text = ToHex(backgroundColor);
-                FrameHex.Text = ToHex(frameColor);
+                foreach (string target in new[] { "Face", "Return", "Light", "Background" })
+                {
+                    Color color = GetColor(target);
+                    ButtonFor(target).Background = new SolidColorBrush(color);
+                    HexFor(target).Text = ColorMath.ToHex(color);
+                }
             }
             finally
             {
@@ -357,53 +381,62 @@ namespace ReklamaMaket
             StatusText.Foreground = (Brush)FindResource(isError ? "ErrorBrush" : "MutedBrush");
         }
 
-        // ------------------------------------------------------------------ hodisalar: sozlamalar
+        private void SetAiStatus(string text, bool isError)
+        {
+            AiStatusText.Text = text;
+            AiStatusText.Foreground = (Brush)FindResource(isError ? "ErrorBrush" : "MutedBrush");
+        }
 
-        private void Setting_Changed(object sender, RoutedEventArgs e)
+        // ================================================================ hodisalar: sozlamalar
+
+        private void Setting_Changed(object sender, RoutedEventArgs e) => ScheduleRefresh();
+
+        private void LogoHeight_Changed(object sender, TextChangedEventArgs e)
         {
             if (suppressEvents)
                 return;
 
-            UpdateSliderTexts();
-            ScheduleRefresh();
-        }
-
-        private void Size_Changed(object sender, RoutedEventArgs e)
-        {
-            if (suppressEvents)
-                return;
-
-            // Qo'lda o'zgartirildi — tayyor o'lcham endi mos emas
-            suppressEvents = true;
-            PresetCombo.SelectedIndex = -1;
-            suppressEvents = false;
-
-            ScheduleRefresh();
-        }
-
-        private void DesignCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (suppressEvents)
-                return;
-
-            if (DesignCombo.SelectedItem is DesignType selected)
-                ApplyDesign(selected);
-        }
-
-        private void PresetCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (suppressEvents || !(PresetCombo.SelectedItem is SizePreset preset))
-                return;
-
-            suppressEvents = true;
-            try
+            if (logoAspect > 0 && Num.TryParse(LogoHeightBox.Text, out double height) && height > 0)
             {
-                WriteSizes(preset);
-            }
-            finally
-            {
+                suppressEvents = true;
+                LogoWidthBox.Text = Num.Format(Math.Round(height * logoAspect, 2));
                 suppressEvents = false;
             }
+            ScheduleRefresh();
+        }
+
+        private void LogoWidth_Changed(object sender, TextChangedEventArgs e)
+        {
+            if (suppressEvents)
+                return;
+
+            if (logoAspect > 0 && Num.TryParse(LogoWidthBox.Text, out double width) && width > 0)
+            {
+                suppressEvents = true;
+                LogoHeightBox.Text = Num.Format(Math.Round(width / logoAspect, 2));
+                suppressEvents = false;
+            }
+            ScheduleRefresh();
+        }
+
+        private void LetterCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!suppressEvents && LetterCombo.SelectedItem is LetterStyle style)
+                ApplyLetterStyle(style);
+        }
+
+        private void BackgroundCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!suppressEvents && BackgroundCombo.SelectedItem is BackgroundStyle style)
+                ApplyBackgroundStyle(style);
+        }
+
+        private void AutoSize_Changed(object sender, RoutedEventArgs e)
+        {
+            if (suppressEvents)
+                return;
+
+            UpdateBackgroundSizeEnabled();
             ScheduleRefresh();
         }
 
@@ -418,10 +451,10 @@ namespace ReklamaMaket
             suppressEvents = true;
             try
             {
-                foreach (TextBox box in SizeBoxes)
+                foreach (TextBox box in LengthBoxes)
                 {
                     if (Num.TryParse(box.Text, out double value))
-                        box.Text = Num.Format(newUnit.FromMm(oldUnit.ToMm(value)));
+                        box.Text = Num.Format(Math.Round(newUnit.FromMm(oldUnit.ToMm(value)), 3));
                 }
                 UpdateUnitTexts();
             }
@@ -432,50 +465,81 @@ namespace ReklamaMaket
             ScheduleRefresh();
         }
 
-        // ------------------------------------------------------------------ hodisalar: ranglar
+        // ================================================================ hodisalar: ranglar
 
-        private void BackgroundButton_Click(object sender, RoutedEventArgs e)
+        private Color GetColor(string target)
         {
-            if (PickColor(ref backgroundColor))
+            switch (target)
             {
+                case "Face": return faceColor;
+                case "Return": return returnColor;
+                case "Light": return lightColor;
+                default: return backgroundColor;
+            }
+        }
+
+        private void SetColor(string target, Color color)
+        {
+            switch (target)
+            {
+                case "Face": faceColor = color; break;
+                case "Return": returnColor = color; break;
+                case "Light": lightColor = color; break;
+                default: backgroundColor = color; break;
+            }
+        }
+
+        private Button ButtonFor(string target)
+        {
+            switch (target)
+            {
+                case "Face": return FaceButton;
+                case "Return": return ReturnButton;
+                case "Light": return LightButton;
+                default: return BackgroundButton;
+            }
+        }
+
+        private TextBox HexFor(string target)
+        {
+            switch (target)
+            {
+                case "Face": return FaceHex;
+                case "Return": return ReturnHex;
+                case "Light": return LightHex;
+                default: return BackgroundHex;
+            }
+        }
+
+        private void ColorButton_Click(object sender, RoutedEventArgs e)
+        {
+            string target = (string)((FrameworkElement)sender).Tag;
+            Color color = GetColor(target);
+            if (PickColor(ref color))
+            {
+                SetColor(target, color);
                 UpdateColorControls();
                 ScheduleRefresh();
             }
         }
 
-        private void FrameButton_Click(object sender, RoutedEventArgs e)
+        private void Swatch_Click(object sender, RoutedEventArgs e)
         {
-            if (PickColor(ref frameColor))
-            {
-                UpdateColorControls();
-                ScheduleRefresh();
-            }
-        }
-
-        private void BackgroundSwatch_Click(object sender, RoutedEventArgs e)
-        {
-            backgroundColor = (Color)((Button)sender).Tag;
+            var tag = (KeyValuePair<string, Color>)((Button)sender).Tag;
+            SetColor(tag.Key, tag.Value);
             UpdateColorControls();
             ScheduleRefresh();
         }
 
-        private void BackgroundHex_TextChanged(object sender, TextChangedEventArgs e)
+        private void Hex_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (suppressEvents || !TryParseHex(BackgroundHex.Text, out Color color))
+            var box = (TextBox)sender;
+            if (suppressEvents || !ColorMath.TryParseHex(box.Text, out Color color))
                 return;
 
-            backgroundColor = color;
-            BackgroundButton.Background = new SolidColorBrush(color);
-            ScheduleRefresh();
-        }
-
-        private void FrameHex_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (suppressEvents || !TryParseHex(FrameHex.Text, out Color color))
-                return;
-
-            frameColor = color;
-            FrameButton.Background = new SolidColorBrush(color);
+            string target = (string)box.Tag;
+            SetColor(target, color);
+            ButtonFor(target).Background = new SolidColorBrush(color);
             ScheduleRefresh();
         }
 
@@ -495,94 +559,24 @@ namespace ReklamaMaket
             }
         }
 
-        private static string ToHex(Color color) => string.Format("#{0:X2}{1:X2}{2:X2}", color.R, color.G, color.B);
-
-        private static bool TryParseHex(string text, out Color color)
-        {
-            color = Colors.White;
-            string hex = (text ?? string.Empty).Trim().TrimStart('#');
-            if (hex.Length != 6 || !int.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int value))
-                return false;
-
-            color = Color.FromRgb((byte)(value >> 16), (byte)(value >> 8), (byte)value);
-            return true;
-        }
-
-        // ------------------------------------------------------------------ hodisalar: 3D ko'rinish
-
-        private void YawSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            // Slayder chapga — konstruksiyaga chap tomondan qaraymiz
-            yawRotation.Angle = -e.NewValue;
-            UpdateSliderTexts();
-        }
-
-        private void PitchSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            pitchRotation.Angle = e.NewValue;
-            UpdateSliderTexts();
-        }
-
-        private void ViewLeft_Click(object sender, RoutedEventArgs e) => YawSlider.Value = ViewAngles[0];
-
-        private void ViewFront_Click(object sender, RoutedEventArgs e) => YawSlider.Value = ViewAngles[1];
-
-        private void ViewRight_Click(object sender, RoutedEventArgs e) => YawSlider.Value = ViewAngles[2];
-
-        private void ViewHost_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            dragStart = e.GetPosition(ViewHost);
-            ViewHost.CaptureMouse();
-        }
-
-        private void ViewHost_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (dragStart == null || e.LeftButton != MouseButtonState.Pressed)
-                return;
-
-            Point position = e.GetPosition(ViewHost);
-            Vector delta = position - dragStart.Value;
-            dragStart = position;
-
-            YawSlider.Value -= delta.X * 0.5;
-            PitchSlider.Value += delta.Y * 0.3;
-        }
-
-        private void ViewHost_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            dragStart = null;
-            ViewHost.ReleaseMouseCapture();
-        }
-
-        private void ViewHost_MouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            zoom = Num.Clamp(zoom * (e.Delta > 0 ? 0.9 : 1.1), 0.35, 3);
-            UpdateCamera();
-            e.Handled = true;
-        }
-
-        private void ViewHost_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateCamera();
-
-        // ------------------------------------------------------------------ hodisalar: Corel
+        // ================================================================ hodisalar: Corel
 
         private void CaptureButton_Click(object sender, RoutedEventArgs e)
         {
             RunCorelAction(() =>
             {
                 CaptureLogo();
-                SetStatus("Logo olindi. Endi dizayn turi va o'lchamlarni tanlang.", false);
+                SetStatus("Logo olindi. Endi harf va fon dizaynini tanlang.", false);
+                return true;
             });
         }
 
-        private void CreateButton_Click(object sender, RoutedEventArgs e)
+        private async void CreateButton_Click(object sender, RoutedEventArgs e)
         {
-            RunCorelAction(() =>
+            EnsureSynchronizationContext();
+            bool drawn = RunCorelAction(() =>
             {
                 corel.Document doc = corelService.RequireDocument();
-                MockupSettings settings = ReadSettings(out string error);
-                if (settings == null)
-                    throw new UserException(error);
-
                 if (logo == null)
                 {
                     if (!corelService.HasSelection())
@@ -590,88 +584,59 @@ namespace ReklamaMaket
                     CaptureLogo();
                 }
 
-                SignModel model = SceneBuilder.Build(design, settings);
-                new CorelSceneRenderer(corelApp).Draw(doc, model, logo);
+                SignSettings settings = ReadSettings(out string error);
+                if (settings == null)
+                    throw new UserException(error);
 
-                SetStatus(string.Format("Tayyor: {0} maketi {1} yaratildi. Bekor qilish — Ctrl+Z.",
-                    design.Name, settings.NewPage ? "yangi sahifada" : "joriy sahifada"), false);
-            });
-        }
-
-        private void ExportViewsButton_Click(object sender, RoutedEventArgs e)
-        {
-            var files = new List<string>();
-            RunCorelAction(() =>
-            {
-                corel.Document doc = corelService.RequireDocument();
-                if (scene == null)
-                    throw new UserException("Avval to'g'ri o'lchamlarni kiriting.");
-
-                ViewTabs.SelectedIndex = 0;
-                ViewTabs.UpdateLayout();
-                double savedYaw = YawSlider.Value;
-                try
+                RuleResult rules = SignRules.Check(settings);
+                if (rules.HasWarnings && !ConfirmWarnings(rules))
                 {
-                    foreach (double angle in ViewAngles)
-                    {
-                        YawSlider.Value = angle;
-                        files.Add(SaveViewImage());
-                    }
-                }
-                finally
-                {
-                    YawSlider.Value = savedYaw;
+                    SetStatus("Bekor qilindi.", false);
+                    return false;
                 }
 
-                double aspect = ViewHost.ActualWidth / Math.Max(1, ViewHost.ActualHeight);
-                new CorelSceneRenderer(corelApp).ImportViews(doc, files, ViewLabels, aspect,
-                    NewPageCheck.IsChecked == true, design.Name + " — 3D ko'rinish");
-
-                SetStatus("3D ko'rinishlar (chapdan, old, o'ngdan) Corelga qo'shildi.", false);
+                lastResult = new ChannelLetterRenderer(corelApp).Draw(doc, settings, logo);
+                SetStatus(string.Format("Tayyor: \"{0}\" dizayni {1} chizildi. Bekor qilish — Ctrl+Z.",
+                    settings.Letter.Name, settings.NewPage ? "yangi sahifada" : "joriy sahifada"), false);
+                return true;
             });
 
-            foreach (string file in files)
-                CorelService.TryDelete(file);
+            if (drawn && AutoSendCheck.IsChecked == true)
+                await GenerateAsync(true);
         }
 
         private void CaptureLogo()
         {
             logo = corelService.CaptureSelection();
+            logoAspect = logo.WidthMm / logo.HeightMm;
             LogoImage.Source = logo.Preview;
-            LogoInfoText.Text = string.Format("{0} ta obyekt\n{1} × {2} mm",
+            LogoInfoText.Text = string.Format("{0} ta obyekt\nCorelda: {1} × {2} mm",
                 logo.Count, Num.Format(Math.Round(logo.WidthMm, 1)), Num.Format(Math.Round(logo.HeightMm, 1)));
+
+            // Bo'yi saqlanadi, eni logo proporsiyasi bo'yicha hisoblanadi
+            if (Num.TryParse(LogoHeightBox.Text, out double height) && height > 0)
+            {
+                bool previous = suppressEvents;
+                suppressEvents = true;
+                LogoWidthBox.Text = Num.Format(Math.Round(height * logoAspect, 2));
+                suppressEvents = previous;
+            }
             RefreshPreview();
         }
 
-        /// <summary>3D oynani 3 barobar katta aniqlikda PNG faylga saqlaydi.</summary>
-        private string SaveViewImage()
+        private static bool ConfirmWarnings(RuleResult rules)
         {
-            const double factor = 3;
-            ViewHost.UpdateLayout();
-            double width = Math.Max(1, ViewHost.ActualWidth);
-            double height = Math.Max(1, ViewHost.ActualHeight);
-
-            var visual = new DrawingVisual();
-            using (DrawingContext dc = visual.RenderOpen())
-                dc.DrawRectangle(new VisualBrush(ViewHost), null, new Rect(0, 0, width, height));
-
-            var bitmap = new RenderTargetBitmap((int)(width * factor), (int)(height * factor), 96 * factor, 96 * factor, PixelFormats.Pbgra32);
-            bitmap.Render(visual);
-
-            string file = Path.Combine(CorelService.TempFolder, "view_" + Guid.NewGuid().ToString("N") + ".png");
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(bitmap));
-            using (FileStream stream = File.Create(file))
-                encoder.Save(stream);
-            return file;
+            string text = "Diqqat:\n\n" + string.Join("\n\n", rules.Warnings.Select(w => "• " + w)) +
+                          "\n\nDizayn shu cheklovlar bilan chiziladi (yassi va/yoki yoritilmagan holda). Davom etilsinmi?";
+            return MessageBox.Show(text, "Reklama Maket — ogohlantirish", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
         }
 
-        private void RunCorelAction(Action action)
+        private bool RunCorelAction(Func<bool> action)
         {
             Mouse.OverrideCursor = Cursors.Wait;
             try
             {
-                action();
+                return action();
             }
             catch (UserException ex)
             {
@@ -685,9 +650,354 @@ namespace ReklamaMaket
             {
                 Mouse.OverrideCursor = null;
             }
+            return false;
         }
 
-        private void DockerUI_Unloaded(object sender, RoutedEventArgs e) => refreshTimer.Stop();
+        // ================================================================ ChatGPT
+
+        private void LoadAiSettings()
+        {
+            ApiKeyBox.Password = appSettings.ApiKey;
+            ModelCombo.ItemsSource = OpenAiImageClient.Models;
+            ModelCombo.Text = string.IsNullOrWhiteSpace(appSettings.Model) ? OpenAiImageClient.Models[0] : appSettings.Model;
+            QualityCombo.ItemsSource = OpenAiImageClient.Qualities;
+            QualityCombo.SelectedItem = OpenAiImageClient.Qualities.Contains(appSettings.Quality) ? appSettings.Quality : "medium";
+            SizeCombo.ItemsSource = OpenAiImageClient.Sizes;
+            SizeCombo.SelectedItem = OpenAiImageClient.Sizes.Contains(appSettings.Size) ? appSettings.Size : "auto";
+            PromptBox.Text = string.IsNullOrWhiteSpace(appSettings.Prompt) ? PromptBuilder.DefaultPrompt : appSettings.Prompt;
+            AiDayCheck.IsChecked = appSettings.Day;
+            AiNightCheck.IsChecked = appSettings.Night;
+            AutoSendCheck.IsChecked = appSettings.AutoSend;
+            KeyStatusText.Text = string.IsNullOrEmpty(appSettings.ApiKey) ? "Kalit kiritilmagan." : "Kalit saqlangan.";
+        }
+
+        private void SaveAiSettings()
+        {
+            try
+            {
+                appSettings.Model = string.IsNullOrWhiteSpace(ModelCombo.Text) ? OpenAiImageClient.Models[0] : ModelCombo.Text.Trim();
+                appSettings.Quality = QualityCombo.SelectedItem as string ?? "medium";
+                appSettings.Size = SizeCombo.SelectedItem as string ?? "auto";
+                appSettings.Prompt = PromptBox.Text == PromptBuilder.DefaultPrompt ? null : PromptBox.Text;
+                appSettings.Day = AiDayCheck.IsChecked == true;
+                appSettings.Night = AiNightCheck.IsChecked == true;
+                appSettings.AutoSend = AutoSendCheck.IsChecked == true;
+                appSettings.Save();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("ReklamaMaket: sozlamalarni saqlab bo'lmadi: " + ex);
+            }
+        }
+
+        /// <summary>Saqlangan kalit; maydonga yangi kalit yozilgan bo'lsa — uni saqlab qaytaradi.</summary>
+        private string CurrentApiKey()
+        {
+            string typed = ApiKeyBox.Password.Trim();
+            if (typed.Length > 0 && typed != appSettings.ApiKey)
+            {
+                appSettings.ApiKey = typed;
+                SaveAiSettings();
+            }
+            return appSettings.ApiKey;
+        }
+
+        private void SaveKeyButton_Click(object sender, RoutedEventArgs e)
+        {
+            appSettings.ApiKey = ApiKeyBox.Password;
+            SaveAiSettings();
+            KeyStatusText.Foreground = (Brush)FindResource("MutedBrush");
+            KeyStatusText.Text = string.IsNullOrEmpty(appSettings.ApiKey) ? "Kalit o'chirildi." : "Kalit saqlandi (shu kompyuterda shifrlangan).";
+        }
+
+        private async void CheckKeyButton_Click(object sender, RoutedEventArgs e)
+        {
+            EnsureSynchronizationContext();
+            string key = CurrentApiKey();
+            if (string.IsNullOrEmpty(key))
+            {
+                KeyStatusText.Foreground = (Brush)FindResource("ErrorBrush");
+                KeyStatusText.Text = "Avval kalitni kiriting.";
+                return;
+            }
+
+            CheckKeyButton.IsEnabled = false;
+            KeyStatusText.Foreground = (Brush)FindResource("MutedBrush");
+            KeyStatusText.Text = "Tekshirilmoqda...";
+            try
+            {
+                using (var client = new OpenAiImageClient(key))
+                    await client.CheckKeyAsync(CancellationToken.None);
+                KeyStatusText.Foreground = (Brush)FindResource("OkBrush");
+                KeyStatusText.Text = "✓ Kalit ishlayapti.";
+            }
+            catch (Exception ex)
+            {
+                KeyStatusText.Foreground = (Brush)FindResource("ErrorBrush");
+                KeyStatusText.Text = ex is UserException ? ex.Message : "Xatolik: " + ex.Message;
+            }
+            finally
+            {
+                CheckKeyButton.IsEnabled = true;
+            }
+        }
+
+        private void Link_RequestNavigate(object sender, RequestNavigateEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
+        }
+
+        private void PickPhotoButton_Click(object sender, RoutedEventArgs e) => PickPhoto();
+
+        private void ClearPhotoButton_Click(object sender, RoutedEventArgs e)
+        {
+            photoPath = null;
+            PhotoText.Text = "tanlanmagan";
+            PhotoText.ToolTip = null;
+        }
+
+        private bool PickPhoto()
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Joy rasmi (bino fasadi)",
+                Filter = "Rasmlar (*.jpg;*.jpeg;*.png;*.webp)|*.jpg;*.jpeg;*.png;*.webp"
+            };
+            if (dialog.ShowDialog() != true)
+                return false;
+
+            if (new FileInfo(dialog.FileName).Length > MaxPhotoBytes)
+            {
+                SetAiStatus("Rasm 45 MB dan katta — kichikroq rasm tanlang.", true);
+                return false;
+            }
+
+            photoPath = dialog.FileName;
+            PhotoText.Text = Path.GetFileName(photoPath);
+            PhotoText.ToolTip = photoPath;
+            return true;
+        }
+
+        private void ResetPromptButton_Click(object sender, RoutedEventArgs e) => PromptBox.Text = PromptBuilder.DefaultPrompt;
+
+        private async void GenerateButton_Click(object sender, RoutedEventArgs e)
+        {
+            EnsureSynchronizationContext();
+            await GenerateAsync(false);
+        }
+
+        private void CancelAiButton_Click(object sender, RoutedEventArgs e) => aiCancel?.Cancel();
+
+        private void OpenFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (lastAiFolder != null && Directory.Exists(lastAiFolder))
+                Process.Start("explorer.exe", "\"" + lastAiFolder + "\"");
+        }
+
+        /// <summary>
+        /// Dizaynni Corel'dan PNG qilib oladi va ChatGPT'ga yuboradi: kunduzgi va kechki real ko'rinish.
+        /// Natija papkaga saqlanadi va Corelga import qilinadi.
+        /// </summary>
+        private async Task GenerateAsync(bool automatic)
+        {
+            if (aiCancel != null)
+                return; // allaqachon ishlayapti
+
+            string key = CurrentApiKey();
+            if (string.IsNullOrEmpty(key))
+            {
+                SetAiStatus("Avval OpenAI API kalitini kiriting va \"Saqlash\"ni bosing. Kalitni \"API kalit olish →\" havolasidan oling.", true);
+                return;
+            }
+
+            bool day = AiDayCheck.IsChecked == true;
+            bool night = AiNightCheck.IsChecked == true;
+            if (!day && !night)
+            {
+                SetAiStatus("Kunduzi yoki kechasi — kamida bittasini belgilang.", true);
+                return;
+            }
+
+            SignSettings settings = ReadSettings(out string error);
+            if (settings == null)
+            {
+                SetAiStatus(error, true);
+                return;
+            }
+            RuleResult rules = SignRules.Check(settings);
+
+            if (!automatic && photoPath == null)
+            {
+                MessageBoxResult answer = MessageBox.Show(
+                    "Dizaynni haqiqiy joy (bino fasadi) rasmida ko'rsatish uchun rasm tanlaysizmi?\n\n" +
+                    "Ha — rasm tanlash\nYo'q — umumiy fasadda ko'rsatish",
+                    "ChatGPT — joy rasmi", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                if (answer == MessageBoxResult.Cancel || (answer == MessageBoxResult.Yes && !PickPhoto()))
+                    return;
+            }
+            SaveAiSettings();
+
+            var exported = new List<string>();
+            string designFile;
+            string nightFile = null;
+            try
+            {
+                if (SourceSelectionRadio.IsChecked == true)
+                {
+                    designFile = corelService.ExportSelectionPng(AiImagePixels);
+                }
+                else
+                {
+                    if (lastResult?.DayView == null)
+                        throw new UserException("Avval \"CORELDA DIZAYN CHIZISH\" tugmasini bosing (yoki \"Corelda tanlangan obyekt\"ni tanlang).");
+                    designFile = corelService.ExportShapePng(lastResult.DayView, AiImagePixels);
+                    if (night && lastResult.NightView != null)
+                        nightFile = corelService.ExportShapePng(lastResult.NightView, AiImagePixels);
+                }
+                exported.Add(designFile);
+                if (nightFile != null)
+                    exported.Add(nightFile);
+            }
+            catch (Exception ex)
+            {
+                exported.ForEach(CorelService.TryDelete);
+                SetAiStatus(ex is UserException ? ex.Message : "Dizaynni eksport qilib bo'lmadi: " + ex.Message, true);
+                return;
+            }
+
+            string model = string.IsNullOrWhiteSpace(ModelCombo.Text) ? OpenAiImageClient.Models[0] : ModelCombo.Text.Trim();
+            string quality = QualityCombo.SelectedItem as string ?? "medium";
+            string size = SizeCombo.SelectedItem as string ?? "auto";
+            string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "ReklamaMaket", "ChatGPT", DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
+
+            aiCancel = new CancellationTokenSource();
+            SetAiBusy(true);
+            SetAiStatus("ChatGPT rasm yaratmoqda... odatda 1–2 daqiqa.", false);
+            try
+            {
+                var errors = new List<string>();
+                byte[] dayImage, nightImage;
+                using (var client = new OpenAiImageClient(key))
+                {
+                    Task<byte[]> dayTask = null, nightTask = null;
+                    if (day)
+                    {
+                        var images = new List<string> { designFile };
+                        if (photoPath != null)
+                            images.Add(photoPath);
+                        string prompt = PromptBuilder.Build(settings, rules, PromptBox.Text, false, false, photoPath != null);
+                        dayTask = client.EditImageAsync(images, prompt, model, size, quality, aiCancel.Token);
+                    }
+                    if (night)
+                    {
+                        var images = new List<string> { designFile };
+                        if (nightFile != null)
+                            images.Add(nightFile);
+                        if (photoPath != null)
+                            images.Add(photoPath);
+                        string prompt = PromptBuilder.Build(settings, rules, PromptBox.Text, true, nightFile != null, photoPath != null);
+                        nightTask = client.EditImageAsync(images, prompt, model, size, quality, aiCancel.Token);
+                    }
+
+                    dayImage = await Collect(dayTask, errors);
+                    nightImage = await Collect(nightTask, errors);
+                }
+
+                var files = new List<string>();
+                var labels = new List<string>();
+                Directory.CreateDirectory(folder);
+                AiDayImage.Source = Save(dayImage, Path.Combine(folder, "kunduzi.png"), "Kunduzi", files, labels);
+                AiNightImage.Source = Save(nightImage, Path.Combine(folder, "kechasi.png"), "Kechasi", files, labels);
+
+                if (files.Count == 0)
+                {
+                    SetAiStatus(string.Join("\n", errors.Distinct()), true);
+                    return;
+                }
+
+                lastAiFolder = folder;
+                AiResults.Visibility = Visibility.Visible;
+                OpenFolderButton.Visibility = Visibility.Visible;
+
+                string imported = string.Empty;
+                try
+                {
+                    corelService.ImportImages(files, labels, settings.Letter.Name + " — ChatGPT ko'rinish", settings.NewPage);
+                    imported = " va Corelga qo'shildi";
+                }
+                catch (Exception ex)
+                {
+                    errors.Add("Corelga import qilib bo'lmadi: " + ex.Message);
+                }
+
+                string message = "Tayyor: rasmlar saqlandi" + imported + ". Papka: " + folder;
+                if (errors.Count > 0)
+                    message += "\n" + string.Join("\n", errors.Distinct());
+                SetAiStatus(message, errors.Count > 0);
+            }
+            catch (OperationCanceledException)
+            {
+                SetAiStatus("Bekor qilindi.", false);
+            }
+            catch (Exception ex)
+            {
+                SetAiStatus(ex is UserException ? ex.Message : "Xatolik: " + ex.Message, true);
+            }
+            finally
+            {
+                aiCancel.Dispose();
+                aiCancel = null;
+                SetAiBusy(false);
+                exported.ForEach(CorelService.TryDelete);
+            }
+        }
+
+        private static async Task<byte[]> Collect(Task<byte[]> task, List<string> errors)
+        {
+            if (task == null)
+                return null;
+            try
+            {
+                return await task;
+            }
+            catch (UserException ex)
+            {
+                errors.Add(ex.Message);
+                return null;
+            }
+        }
+
+        private static ImageSource Save(byte[] image, string file, string label, List<string> files, List<string> labels)
+        {
+            if (image == null)
+                return null;
+            File.WriteAllBytes(file, image);
+            files.Add(file);
+            labels.Add(label);
+            return CorelService.LoadBitmap(file);
+        }
+
+        private void SetAiBusy(bool busy)
+        {
+            GenerateButton.IsEnabled = !busy;
+            CancelAiButton.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+            AiProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        /// <summary>await'dan keyin kod Corel/WPF oqimida davom etishi uchun.</summary>
+        private void EnsureSynchronizationContext()
+        {
+            if (!(SynchronizationContext.Current is DispatcherSynchronizationContext))
+                SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher));
+        }
+
+        private void DockerUI_Unloaded(object sender, RoutedEventArgs e)
+        {
+            refreshTimer.Stop();
+            SaveAiSettings();
+        }
 
         /// <summary>ComboBox uchun nom + qiymat.</summary>
         private sealed class Choice<T>

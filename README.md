@@ -4,4 +4,4 @@ Plaginlar to'plami.
 
 | Papka | Tavsif |
 |---|---|
-| [ReklamaMaket](ReklamaMaket/) | CorelDRAW paneli: logoni tashqi reklama konstruksiyasida (laytboks, banner, bilbord, pilon) maket qilib ko'rsatadi, 2D va 3D ko'rinish bilan. |
+| [ReklamaMaket](ReklamaMaket/) | CorelDRAW paneli: logodan hajmli harf (channel letters) dizaynini chizadi — harf va fon dizayni, o'lchamlar, kechki ko'rinish, kesim; ChatGPT bilan real ko'rinish. |

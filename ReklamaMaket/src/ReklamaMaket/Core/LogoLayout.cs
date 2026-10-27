@@ -1,52 +1,65 @@
 using System;
 using System.Windows;
+using ReklamaMaket.Designs;
 
 namespace ReklamaMaket.Core
 {
+    /// <summary>Fon o'lchami va logoning fon ichidagi o'rni (mm).</summary>
+    public struct SignLayout
+    {
+        public double BackgroundWidth;
+        public double BackgroundHeight;
+
+        /// <summary>Logo to'rtburchagi: fonning chap-yuqori burchagidan, Y pastga qarab.</summary>
+        public Rect Logo;
+    }
+
     /// <summary>
-    /// Logoni yuz (fon) ichiga joylashtirish hisobi. Panel ko'rinishi ham, Corelda chizish ham
-    /// shu bitta hisobdan foydalanadi — shuning uchun ikkalasi bir xil chiqadi.
+    /// Logo va fon joylashuvi. Panel ko'rinishi ham, Corel chizmasi ham shu bitta hisobdan
+    /// foydalanadi — shuning uchun ikkalasi bir xil chiqadi.
     /// </summary>
     public static class LogoLayout
     {
-        /// <summary>
-        /// Logo to'rtburchagini qaytaradi. Koordinatalar yuzning chap-yuqori burchagidan,
-        /// Y pastga qarab o'sadi. Natija birligi faceWidth/faceHeight birligi bilan bir xil.
-        /// </summary>
-        public static Rect Place(double faceWidth, double faceHeight, double logoWidth, double logoHeight, MockupSettings settings)
+        public static SignLayout Compute(SignSettings s)
         {
-            logoWidth = Math.Max(logoWidth, 0.001);
-            logoHeight = Math.Max(logoHeight, 0.001);
+            double margin = Math.Max(0, s.Margin);
+            double width, height;
 
-            double margin = Math.Min(faceWidth, faceHeight) * Num.Clamp(settings.MarginPercent, 0, 45) / 100.0;
-            double availableWidth = Math.Max(faceWidth - 2 * margin, faceWidth * 0.05);
-            double availableHeight = Math.Max(faceHeight - 2 * margin, faceHeight * 0.05);
+            if (s.AutoBackgroundSize || s.Background.Kind == BackgroundKind.Wall)
+            {
+                width = s.LogoWidth + 2 * margin;
+                height = s.LogoHeight + 2 * margin;
+            }
+            else
+            {
+                width = Math.Max(s.BackgroundWidth, 1);
+                height = Math.Max(s.BackgroundHeight, 1);
+            }
 
-            double fit = Math.Min(availableWidth / logoWidth, availableHeight / logoHeight);
-            fit *= Num.Clamp(settings.LogoSizePercent, 5, 100) / 100.0;
-
-            double width = logoWidth * fit;
-            double height = logoHeight * fit;
-            double x = (faceWidth - width) / 2;
-            double y = (faceHeight - height) / 2;
-
-            switch (settings.Align)
+            double x = (width - s.LogoWidth) / 2;
+            double y = (height - s.LogoHeight) / 2;
+            switch (s.Align)
             {
                 case LogoAlign.Left:
                     x = margin;
                     break;
                 case LogoAlign.Right:
-                    x = faceWidth - margin - width;
+                    x = width - margin - s.LogoWidth;
                     break;
                 case LogoAlign.Top:
                     y = margin;
                     break;
                 case LogoAlign.Bottom:
-                    y = faceHeight - margin - height;
+                    y = height - margin - s.LogoHeight;
                     break;
             }
 
-            return new Rect(x, y, width, height);
+            return new SignLayout
+            {
+                BackgroundWidth = width,
+                BackgroundHeight = height,
+                Logo = new Rect(x, y, s.LogoWidth, s.LogoHeight)
+            };
         }
     }
 }
