@@ -50,8 +50,28 @@ namespace ReklamaMaket.Designs
         Pattern
     }
 
+    /// <summary>Logo fonga o'yilganmi (alyukobond) yoki alohida hajmli harfmi.</summary>
+    public enum CutMode
+    {
+        /// <summary>Alohida hajmli harflar (channel letters).</summary>
+        None,
+
+        /// <summary>Yuzdan logo o'yib chiqarilgan, o'yiqqa akril qo'yilgan, ichidan yonadi.</summary>
+        RoutedLit,
+
+        /// <summary>Qalin akril harf o'yiqdan o'tib, yuzdan chiqib turadi (push-through).</summary>
+        PushThrough,
+
+        /// <summary>O'yib chiqarilgan, orqasidan boshqa rangli panel ko'rinadi (yonmaydi).</summary>
+        RoutedBacking,
+
+        /// <summary>Gravirovka — yuzga o'yib yozilgan, o'yiqda alyuminiy ko'rinadi (yonmaydi).</summary>
+        Engraved
+    }
+
     /// <summary>
-    /// Hajmli harf (channel letter) turi. Barcha turlar <see cref="LetterStyles.All"/> ro'yxatida.
+    /// Logo dizayni: hajmli harf (channel letter) yoki fonga o'yilgan logo.
+    /// Barcha turlar <see cref="LetterStyles.All"/> ro'yxatida.
     /// </summary>
     public sealed class LetterStyle
     {
@@ -102,6 +122,22 @@ namespace ReklamaMaket.Designs
 
         /// <summary>Harf devordan distansiyada turadi (kontrajur uchun shart).</summary>
         public bool OnStandoffs { get; set; }
+
+        /// <summary>Logo fonga o'yiladi (alyukobond) — alohida harf emas.</summary>
+        public CutMode Cut { get; set; }
+
+        public bool IsCut => Cut != CutMode.None;
+
+        /// <summary>Ro'yxatdagi guruh nomi.</summary>
+        public string Group => IsCut ? "Fonga o'yilgan logo (alyukobond)" : "Hajmli harflar (channel letters)";
+
+        /// <summary>Paneldagi rang va qalinlik yozuvlari (o'yilgan logoda ma'nosi boshqacha).</summary>
+        public string FaceColorLabel { get; set; } = "Yuz";
+        public string ReturnColorLabel { get; set; } = "Bort";
+        public string DepthLabel { get; set; } = "Qalinligi";
+
+        /// <summary>Push-through harfning yuzdan chiqib turishi, mm.</summary>
+        public double Protrusion(double depth) => System.Math.Max(depth - 5, 3);
 
         /// <summary>Kesim sxemasidagi yozuvlar.</summary>
         public string FaceLabel { get; }
@@ -235,6 +271,39 @@ namespace ReklamaMaket.Designs
                 LightZones.None, FaceMaterial.Metal, Rgb(0xC9A44C), Rgb(0xA8873A), White, 0, 30,
                 "Yuz: metall", "Bort: metall",
                 "non-illuminated brushed metal letters"),
+
+            // ---- Fonga o'yilgan logo (alyukobond)
+            new LetterStyle("O'yib chiqarilgan + akril, yonadi", "Routed (cut-out) face with flush acrylic, backlit",
+                "Alyukobond yuzdan logo frezerda o'yib chiqariladi, o'yiqqa yuz bilan bir tekis akril qo'yiladi, ichidan LED yoritadi " +
+                "(Cocktail, ABIERTO, OPEN rasmlari). Rangli akril yoki logoning o'z ranglari.",
+                LightZones.Face, FaceMaterial.Acrylic, White, White, White, 0, 10,
+                "Akril, yuz bilan bir tekis", "Yuz: alyukobond 4 mm, logo o'yilgan",
+                "the logo is CNC-routed (cut out) of the opaque aluminium composite face of a light box, and the cut-outs are filled " +
+                "with milky acrylic that sits flush with the face; LEDs inside the box make only the logo glow")
+            { Cut = CutMode.RoutedLit, FaceColorLabel = "Akril", ReturnColorLabel = "—", DepthLabel = "Akril qalinligi" },
+
+            new LetterStyle("Push-through: akril harf chiqib turadi", "Push-through acrylic letters",
+                "Qalin akril harf yuzdagi o'yiqdan o'tib, tashqariga chiqib turadi; yuziga rangli plyonka, qirralari yonadi (\"akti\" rasmi).",
+                LightZones.Face | LightZones.SideFull, FaceMaterial.ClearAcrylic, Rgb(0x1FC7D4), White, White, 4, 20,
+                "Akril harf, yuzdan chiqib turadi", "Yuz: alyukobond 4 mm, logo o'yilgan",
+                "thick acrylic letters pushed through routed openings in the aluminium composite face of a light box " +
+                "so they protrude from it; the letter faces are covered with coloured film and the clear edges glow brightly")
+            { Cut = CutMode.PushThrough, FaceColorLabel = "Plyonka", ReturnColorLabel = "Qirra", DepthLabel = "Akril qalinligi" },
+
+            new LetterStyle("O'yib chiqarilgan, orqasida rangli panel", "Routed face over a contrasting backing panel",
+                "Old panel o'yib chiqariladi, orqasidagi boshqa rangli panel ko'rinadi — ikki qatlamli (HORUS rasmidagi kichik yozuv).",
+                LightZones.None, FaceMaterial.Acrylic, Rgb(0x3FA9F5), White, White, 0, 4,
+                "Orqa panel (ikkinchi qatlam)", "Yuz: alyukobond 4 mm, logo o'yilgan",
+                "the logo is cut out through the front aluminium composite panel, revealing a second panel of a different colour mounted " +
+                "behind it (two-layer sign, not illuminated)")
+            { Cut = CutMode.RoutedBacking, FaceColorLabel = "Orqa panel", ReturnColorLabel = "—", DepthLabel = "Panel qalinligi" },
+
+            new LetterStyle("Gravirovka (o'yib yozilgan)", "Engraved (V-groove) logo",
+                "Logo alyukobond yuziga frezer bilan o'yib yoziladi — o'yiqda kumush alyuminiy ko'rinadi.",
+                LightZones.None, FaceMaterial.Metal, Rgb(0xC9CED3), White, White, 0, 2,
+                "O'yiq: alyuminiy ko'rinadi", "Yuz: alyukobond 4 mm",
+                "the logo is engraved (V-groove milled) into the aluminium composite face so the bare silver aluminium shows in the engraving; not illuminated")
+            { Cut = CutMode.Engraved, FaceColorLabel = "O'yiq", ReturnColorLabel = "—", DepthLabel = "O'yiq chuqurligi" },
         };
     }
 }

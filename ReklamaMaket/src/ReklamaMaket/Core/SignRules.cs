@@ -39,23 +39,35 @@ namespace ReklamaMaket.Core
             {
                 CanBe3D = s.LogoHeight >= Min3DHeightMm,
             };
-            result.CanLight = result.CanBe3D && s.Depth >= MinLitDepthMm;
+            // O'yilgan logoni ichidagi LED yoritadi — 4 sm qoidasi quti (fon) chuqurligiga qo'llanadi
+            bool cut = s.Letter.IsCut;
+            double lightDepth = cut ? s.BackgroundDepth : s.Depth;
+            result.CanLight = result.CanBe3D && lightDepth >= MinLitDepthMm;
             result.LettersLit = s.Letter.Illuminated && result.CanLight;
+            bool wrongBackground = cut && !s.Background.CanBeCut;
 
             if (!result.CanBe3D)
             {
-                result.Warnings.Add(string.Format(
-                    "Logo balandligi {0} sm — 20 sm dan past. Bunday logoni hajmli (3D) va yoritilgan qilib bo'lmaydi: faqat yassi harf bo'ladi.",
+                result.Warnings.Add(string.Format(cut
+                        ? "Logo balandligi {0} sm — 20 sm dan past. Bunday logoni yoritib va chiqarib (3D) bo'lmaydi: faqat yassi o'yiq bo'ladi."
+                        : "Logo balandligi {0} sm — 20 sm dan past. Bunday logoni hajmli (3D) va yoritilgan qilib bo'lmaydi: faqat yassi harf bo'ladi.",
                     Num.Format(s.LogoHeight / 10)));
             }
-            else if (s.Depth < MinLitDepthMm && s.Letter.Illuminated)
+            else if (lightDepth < MinLitDepthMm && s.Letter.Illuminated && !wrongBackground)
             {
-                result.Warnings.Add(string.Format(
-                    "Qalinligi {0} sm — 4 sm dan kam. Bunday harfni yoritib bo'lmaydi (ichiga LED sig'maydi).",
-                    Num.Format(s.Depth / 10)));
+                result.Warnings.Add(string.Format(cut
+                        ? "Quti (fon) qalinligi {0} sm — 4 sm dan kam. O'yilgan logoni yoritib bo'lmaydi (ichiga LED sig'maydi)."
+                        : "Qalinligi {0} sm — 4 sm dan kam. Bunday harfni yoritib bo'lmaydi (ichiga LED sig'maydi).",
+                    Num.Format(lightDepth / 10)));
             }
 
-            bool backgroundWantsLight = s.Background.Kind == BackgroundKind.Lightbox ||
+            if (wrongBackground)
+            {
+                result.Warnings.Add("O'yilgan logo uchun fon alyukobond bo'lishi kerak: kompozit panel, kasseta, laytboks yoki alyukobond quti.");
+            }
+
+            // O'yilgan logoda laytboks yuzi butunlay yonmaydi — faqat o'yiq joylar yonadi
+            bool backgroundWantsLight = (s.Background.Kind == BackgroundKind.Lightbox && !cut) ||
                                         (s.Background.SupportsLighting && s.BackgroundLight != BackgroundLight.None);
             if (backgroundWantsLight)
             {

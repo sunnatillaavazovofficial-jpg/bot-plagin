@@ -33,7 +33,10 @@ namespace ReklamaMaket.Designs
         HorizontalSlats,
 
         /// <summary>Vertikal reykali (qovurg'ali) panel.</summary>
-        VerticalSlats
+        VerticalSlats,
+
+        /// <summary>Alyukobond quti — yuzi shaffof emas, logo yuzga o'yiladi, ichida LED.</summary>
+        AcpBox
     }
 
     /// <summary>Logo orqasidagi fon (podloshka) turi. Ro'yxat — <see cref="BackgroundStyles.All"/>.</summary>
@@ -69,6 +72,13 @@ namespace ReklamaMaket.Designs
         public bool HasPattern => Kind == BackgroundKind.PatternSheet || Kind == BackgroundKind.FramedMesh || Kind == BackgroundKind.WoodFrameMesh;
 
         public bool HasSlats => Kind == BackgroundKind.HorizontalSlats || Kind == BackgroundKind.VerticalSlats;
+
+        /// <summary>Logo o'yib qilinadigan alyukobond yuz (panel, kasseta, quti).</summary>
+        public bool CanBeCut => Kind == BackgroundKind.Panel || Kind == BackgroundKind.Cassette ||
+                                Kind == BackgroundKind.Lightbox || Kind == BackgroundKind.AcpBox;
+
+        /// <summary>Chetida o'yilgan ramka chizig'i qo'yish mumkin.</summary>
+        public bool CanHaveBorder => CanBeCut;
 
         /// <summary>Qaysi joyi yonishini tanlash mumkin.</summary>
         public bool SupportsLighting => HasPattern || HasSlats;
@@ -115,6 +125,11 @@ namespace ReklamaMaket.Designs
                 "Shaffof akril plita devordan distansiya boltlarida turadi.",
                 Color.FromRgb(0xEA, 0xF3, 0xF7), 10,
                 "on a clear acrylic plate mounted on polished steel standoffs"),
+
+            new BackgroundStyle(BackgroundKind.AcpBox, "Alyukobond quti (yuzi o'yiladi)", "Aluminium composite light box with routed face",
+                "Alyukobonddan yasalgan quti: yuzi yonmaydi, logo yuzga o'yiladi va ichidagi LED faqat logoni yoritadi.",
+                Color.FromRgb(0x1E, 0x1E, 0x1E), 80,
+                "on a box made of aluminium composite panels with an opaque face and LEDs inside"),
 
             new BackgroundStyle(BackgroundKind.PatternSheet, "Gulli temir list (perforatsiya)", "Perforated metal sheet with pattern",
                 "Lazer/press bilan gul teshilgan temir list. Orqasiga LED qo'yilsa, teshiklar orqali yonadi.",

@@ -125,6 +125,26 @@ namespace ReklamaMaket.Rendering
                 case BackgroundKind.VerticalSlats:
                     canvas.Children.Add(SlatBackground(s, rules, night, px));
                     break;
+
+                case BackgroundKind.AcpBox:
+                    canvas.Children.Add(new Rectangle
+                    {
+                        Fill = Brush(night ? ColorMath.Shade(color, 0.22) : color),
+                        Stroke = Brush(ColorMath.Shade(color, 0.55)),
+                        StrokeThickness = 1
+                    });
+                    break;
+            }
+
+            if (s.EngravedBorder && s.Background.CanHaveBorder)
+            {
+                Color silver = ColorMath.Rgb(0xC9CED3);
+                canvas.Children.Add(new Rectangle
+                {
+                    Margin = new Thickness(Num.Clamp(minSide * 0.04, 25, 80) * px),
+                    Stroke = Brush(night ? ColorMath.Shade(silver, 0.3) : silver),
+                    StrokeThickness = Math.Max(Num.Clamp(minSide * 0.008, 4, 12) * px, 1)
+                });
             }
             return canvas;
         }
@@ -276,8 +296,71 @@ namespace ReklamaMaket.Rendering
             return image;
         }
 
+        /// <summary>Fonga o'yilgan logo (Corel chizmasi bilan bir xil mantiq).</summary>
+        private static void AddCutLogo(Grid grid, SignSettings s, RuleResult rules, BitmapSource mask, BitmapSource original, bool night, double px)
+        {
+            LetterStyle letter = s.Letter;
+            bool lit = night && rules.LettersLit;
+            Color light = s.LightColor;
+            double glow = Num.Clamp(s.LogoHeight * 0.06, 15, 150) * px;
+            CutMode mode = letter.Cut == CutMode.PushThrough && !rules.CanBe3D ? CutMode.RoutedLit : letter.Cut;
+            Color edge = ColorMath.Shade(s.BackgroundColor, 0.45);
+
+            if (mode == CutMode.PushThrough)
+            {
+                if (!night)
+                {
+                    double offset = Num.Clamp(letter.Protrusion(s.Depth) * 0.35, 3, 20) * px;
+                    UIElement shadow = Silhouette(mask, Brush(Colors.Black), new BlurEffect { Radius = Math.Max(1, offset * 0.6) });
+                    shadow.Opacity = 0.3;
+                    shadow.RenderTransform = new TranslateTransform(offset, offset);
+                    grid.Children.Add(shadow);
+                }
+                if (lit)
+                    grid.Children.Add(Silhouette(mask, Brush(light), new BlurEffect { Radius = glow * 0.8 }));
+                AddOutline(grid, mask, lit ? light : (night ? ColorMath.Shade(s.ReturnColor, 0.25) : s.ReturnColor), Math.Max(Math.Max(letter.TrimMm, 3) * px, 0.8));
+            }
+            else
+            {
+                AddOutline(grid, mask, night ? ColorMath.Shade(edge, 0.4) : edge, Math.Max(1.5 * px, 0.6));
+            }
+
+            bool faceLit = lit && (mode == CutMode.RoutedLit || mode == CutMode.PushThrough);
+            FrameworkElement face;
+            if (s.KeepLogoColors && original != null && mode == CutMode.RoutedLit && (!night || faceLit))
+            {
+                face = new Image { Source = original, Stretch = Stretch.Fill };
+            }
+            else
+            {
+                Color color = night ? (faceLit ? ColorMath.Lit(s.FaceColor) : ColorMath.Shade(s.FaceColor, 0.22)) : s.FaceColor;
+                face = Silhouette(mask, !night && mode == CutMode.Engraved ? Metal(color) : Brush(color), null);
+            }
+            if (faceLit)
+                face.Effect = new DropShadowEffect { ShadowDepth = 0, BlurRadius = glow * 0.7, Color = ColorMath.Lit(s.FaceColor), Opacity = 1 };
+            grid.Children.Add(face);
+        }
+
+        /// <summary>Logo atrofida chiziq: siljitilgan nusxalar.</summary>
+        private static void AddOutline(Grid grid, BitmapSource mask, Color color, double width)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                double angle = i * Math.PI / 4;
+                UIElement copy = Silhouette(mask, Brush(color), null);
+                copy.RenderTransform = new TranslateTransform(Math.Cos(angle) * width, Math.Sin(angle) * width);
+                grid.Children.Add(copy);
+            }
+        }
+
         private static void AddLetters(Grid grid, SignSettings s, RuleResult rules, BitmapSource mask, BitmapSource original, bool night, double px)
         {
+            if (s.Letter.IsCut)
+            {
+                AddCutLogo(grid, s, rules, mask, original, night, px);
+                return;
+            }
+
             LetterStyle letter = s.Letter;
             bool volumetric = rules.CanBe3D;
             bool lit = night && rules.LettersLit;

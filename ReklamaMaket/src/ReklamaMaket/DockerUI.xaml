@@ -108,7 +108,7 @@
                 <!-- 2. Harf (logo) dizayni -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="2. HARF DIZAYNI (LOGO)"/>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="2. LOGO DIZAYNI (HARF YOKI O'YIQ)"/>
                         <ComboBox x:Name="LetterCombo" SelectionChanged="LetterCombo_SelectionChanged">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -118,6 +118,16 @@
                                     </StackPanel>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
+                            <ComboBox.GroupStyle>
+                                <GroupStyle>
+                                    <GroupStyle.HeaderTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="10.5" Foreground="#2F6FDE"
+                                                       Margin="4,6,0,2"/>
+                                        </DataTemplate>
+                                    </GroupStyle.HeaderTemplate>
+                                </GroupStyle>
+                            </ComboBox.GroupStyle>
                         </ComboBox>
                         <TextBlock x:Name="LetterDescription" Style="{StaticResource Hint}" Margin="0,4,0,8"/>
 
@@ -127,14 +137,14 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="28"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Qalinligi"/>
+                            <TextBlock x:Name="DepthLabel" Style="{StaticResource FieldLabel}" Text="Qalinligi"/>
                             <TextBox x:Name="DepthBox" Grid.Column="1" TextChanged="Setting_Changed"/>
                             <TextBlock x:Name="DepthUnit" Grid.Column="2" Style="{StaticResource Hint}" Margin="4,0,0,0" VerticalAlignment="Center"/>
                         </Grid>
 
                         <Grid Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="44"/>
+                                <ColumnDefinition Width="Auto" MinWidth="44"/>
                                 <ColumnDefinition Width="34"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
@@ -145,12 +155,12 @@
                                 <RowDefinition/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Yuz"/>
+                            <TextBlock x:Name="FaceColorLabel" Style="{StaticResource FieldLabel}" Text="Yuz"/>
                             <Button x:Name="FaceButton" Grid.Column="1" Tag="Face" Style="{StaticResource Swatch}" Width="28"
                                     Margin="0,2,6,2" ToolTip="Yuz rangi" Click="ColorButton_Click"/>
                             <TextBox x:Name="FaceHex" Grid.Column="2" Tag="Face" HorizontalContentAlignment="Left" TextChanged="Hex_TextChanged"/>
 
-                            <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Bort"/>
+                            <TextBlock x:Name="ReturnColorLabel" Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Bort"/>
                             <Button x:Name="ReturnButton" Grid.Row="1" Grid.Column="1" Tag="Return" Style="{StaticResource Swatch}" Width="28"
                                     Margin="0,2,6,2" ToolTip="Bort (yon tomoni) rangi" Click="ColorButton_Click"/>
                             <TextBox x:Name="ReturnHex" Grid.Row="1" Grid.Column="2" Tag="Return" HorizontalContentAlignment="Left" TextChanged="Hex_TextChanged"/>
@@ -226,6 +236,9 @@
                             <TextBox x:Name="BackgroundHex" Grid.Column="2" Tag="Background" HorizontalContentAlignment="Left" TextChanged="Hex_TextChanged"/>
                             <WrapPanel x:Name="BackgroundSwatches" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,4,0,0"/>
                         </Grid>
+
+                        <CheckBox x:Name="EngravedBorderCheck" Content="Chetida o'yilgan ramka chizig'i (gravirovka)" Margin="0,6,0,0"
+                                  Visibility="Collapsed" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
 
                         <CheckBox x:Name="AutoSizeCheck" IsChecked="True" Content="Avtomatik o'lcham (logo + chetdan joy)" Margin="0,6,0,2"
                                   Checked="AutoSize_Changed" Unchecked="AutoSize_Changed"/>

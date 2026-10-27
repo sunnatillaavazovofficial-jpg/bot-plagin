@@ -38,6 +38,7 @@ namespace ReklamaMaket.Rendering
         private static readonly WpfColor WallSection = Rgb(0xC9C2B8);
         private static readonly WpfColor Steel = Rgb(0xA3A9AF);
         private static readonly WpfColor ClearAcrylic = Rgb(0xDDE8EE);
+        private static readonly WpfColor Silver = Rgb(0xC9CED3);
 
         private static readonly WpfColor WallBehind = ColorMath.WallBehind;
         private static readonly WpfColor Diffuser = ColorMath.Diffuser;
@@ -393,6 +394,21 @@ namespace ReklamaMaket.Rendering
                 case BackgroundKind.VerticalSlats:
                     DrawSlats(items, night, vx, vy);
                     break;
+
+                case BackgroundKind.AcpBox:
+                    // Quti yuzi yonmaydi — faqat o'yilgan logo yonadi
+                    items.Add(Outlined(Box(vx, vy, viewW, viewH, night ? Shade(color, 0.22) : color), Shade(color, 0.55)));
+                    break;
+            }
+
+            if (s.EngravedBorder && s.Background.CanHaveBorder)
+            {
+                double inset = Num.Clamp(minSide * 0.04, 25, 80) * k;
+                double width = Num.Clamp(minSide * 0.008, 4, 12) * k;
+                corel.Shape border = Box(vx + inset, vy + inset, viewW - 2 * inset, viewH - 2 * inset, Silver);
+                border.Fill.ApplyNoFill();
+                Stroke(border, width, night ? Shade(Silver, 0.3) : Silver);
+                items.Add(border);
             }
         }
 
@@ -547,6 +563,12 @@ namespace ReklamaMaket.Rendering
 
         private void DrawLetters(List<corel.Shape> items, bool night, double dx, double dy)
         {
+            if (s.Letter.IsCut)
+            {
+                DrawCutLogo(items, night, dx, dy);
+                return;
+            }
+
             LetterStyle letter = s.Letter;
             bool volumetric = rules.CanBe3D;
             bool lit = night && rules.LettersLit;
@@ -646,6 +668,70 @@ namespace ReklamaMaket.Rendering
             }
         }
 
+        /// <summary>Fonga o'yilgan logo: o'yiq + akril / chiqib turuvchi harf / orqa panel / gravirovka.</summary>
+        private void DrawCutLogo(List<corel.Shape> items, bool night, double dx, double dy)
+        {
+            LetterStyle letter = s.Letter;
+            bool lit = night && rules.LettersLit;
+            WpfColor light = s.LightColor;
+            double glow = Num.Clamp(s.LogoHeight * 0.06, 15, 150) * k;
+            // 20 sm dan past logo chiqib turolmaydi — yassi o'yiq bo'ladi
+            CutMode mode = letter.Cut == CutMode.PushThrough && !rules.CanBe3D ? CutMode.RoutedLit : letter.Cut;
+            WpfColor edge = Shade(s.BackgroundColor, 0.45);
+
+            if (mode == CutMode.PushThrough)
+            {
+                if (!night)
+                {
+                    double offset = Num.Clamp(letter.Protrusion(s.Depth) * 0.35, 3, 20) * k;
+                    corel.Shape shadow = Dup(silhouette, dx + offset, dy - offset);
+                    Fill(shadow, Rgb(0x000000));
+                    shadow.Outline.SetNoOutline();
+                    shadow.Transparency.ApplyUniformTransparency(78);
+                    items.Add(shadow);
+                }
+                if (lit)
+                    Glow(items, dx, dy, light, glow * 0.5, 3);
+
+                WpfColor rimColor = lit ? light : (night ? Shade(s.ReturnColor, 0.25) : s.ReturnColor);
+                corel.Shape rim = Dup(silhouette, dx, dy);
+                Fill(rim, rimColor);
+                Stroke(rim, Math.Max(letter.TrimMm, 3) * k * 2, rimColor);
+                items.Add(rim);
+            }
+            else if (lit && mode == CutMode.RoutedLit)
+            {
+                Glow(items, dx, dy, Lit(s.FaceColor), glow * 0.35, 3);
+            }
+
+            if (mode != CutMode.PushThrough)
+            {
+                // O'yiq cheti (frezer izi)
+                corel.Shape cutEdge = Dup(silhouette, dx, dy);
+                Fill(cutEdge, edge);
+                Stroke(cutEdge, Math.Max(2.5 * k, th * 0.03), night ? Shade(edge, 0.4) : edge);
+                items.Add(cutEdge);
+            }
+
+            bool faceLit = lit && (mode == CutMode.RoutedLit || mode == CutMode.PushThrough);
+            corel.Shape face;
+            if (s.KeepLogoColors && mode == CutMode.RoutedLit && (!night || faceLit))
+            {
+                face = Dup(logoTemplate, dx, dy);
+            }
+            else
+            {
+                face = Dup(silhouette, dx, dy);
+                WpfColor color = night ? (faceLit ? Lit(s.FaceColor) : Shade(s.FaceColor, 0.22)) : s.FaceColor;
+                if (!night && mode == CutMode.Engraved)
+                    Metallic(face, color);
+                else
+                    Fill(face, color);
+                face.Outline.SetNoOutline();
+            }
+            items.Add(face);
+        }
+
         /// <summary>Soya siljishi (mm): qalinlik va distansiyaga bog'liq.</summary>
         private double ShadowOffset() => Num.Clamp((s.Depth + (s.Letter.OnStandoffs ? 30 : 0)) * 0.3, 4, 60);
 
@@ -688,6 +774,8 @@ namespace ReklamaMaket.Rendering
                     return "Fon: gorizontal reykalar, kronshteyn";
                 case BackgroundKind.VerticalSlats:
                     return "Fon: vertikal reykali panel";
+                case BackgroundKind.AcpBox:
+                    return "Quti: alyukobond, " + Num.Format(s.BackgroundDepth) + " mm";
                 default:
                     return null;
             }
@@ -697,6 +785,9 @@ namespace ReklamaMaket.Rendering
 
         private List<string> SectionLabels()
         {
+            if (s.Letter.IsCut)
+                return CutSectionLabels();
+
             var labels = new List<string> { "Devor" };
             string background = BackgroundLabel();
             if (background != null)
@@ -718,8 +809,170 @@ namespace ReklamaMaket.Rendering
             return labels;
         }
 
+        private CutMode SectionCutMode =>
+            s.Letter.Cut == CutMode.PushThrough && !rules.CanBe3D ? CutMode.RoutedLit : s.Letter.Cut;
+
+        /// <summary>Fon qutisi bormi (o'yilgan logo uchun ichida LED joylashadi).</summary>
+        private bool CutHasBox => s.Background.Kind == BackgroundKind.AcpBox || s.Background.Kind == BackgroundKind.Lightbox ||
+                                  s.Background.Kind == BackgroundKind.Cassette;
+
+        private List<string> CutSectionLabels()
+        {
+            var labels = new List<string> { "Devor" };
+            if (CutHasBox)
+                labels.Add("Quti: alyukobond, " + Num.Format(s.BackgroundDepth) + " mm");
+            labels.Add(s.Letter.ReturnLabel);
+            switch (SectionCutMode)
+            {
+                case CutMode.RoutedLit:
+                    labels.Add("Akril " + Num.Format(s.Depth) + " mm, yuz bilan bir tekis");
+                    break;
+                case CutMode.PushThrough:
+                    labels.Add("Akril harf " + Num.Format(s.Depth) + " mm, " + Num.Format(s.Letter.Protrusion(s.Depth)) + " mm chiqib turadi");
+                    break;
+                case CutMode.RoutedBacking:
+                    labels.Add("Orqa panel (boshqa rang)");
+                    break;
+                case CutMode.Engraved:
+                    labels.Add("Gravirovka: alyuminiy ko'rinadi");
+                    break;
+            }
+            if (rules.LettersLit && CutHasBox)
+                labels.Add("LED modullar");
+            return labels;
+        }
+
+        /// <summary>O'yilgan logo kesimi: quti, yuz va o'yiq (akril / chiqib turuvchi harf / orqa panel / gravirovka).</summary>
+        private List<corel.Shape> DrawCutSection(double sx, double sy, double height)
+        {
+            var items = new List<corel.Shape>();
+            var anchors = new List<Point>();
+            CutMode mode = SectionCutMode;
+            bool lit = rules.LettersLit;
+            double u = height / 10;
+            double x = sx;
+
+            // Devor
+            items.Add(Outlined(Box(x, sy, u, height, WallSection), Ink));
+            for (double hy = sy; hy + u <= sy + height + 0.001; hy += u * 0.8)
+                items.Add(Line(x, hy, x + u, hy + u, LeaderInk, th * 0.03));
+            anchors.Add(new Point(x + u / 2, sy + height - u / 2));
+            x += u;
+
+            double top = sy + 0.5 * u;
+            double bottom = sy + height - 0.5 * u;
+            double wall = 0.12 * u;
+            double boxDepth = CutHasBox ? 2.2 * u : 0.2 * u;
+            double faceX = x + boxDepth;
+            double faceT = 0.15 * u;
+            double mid = (top + bottom) / 2;
+            double gapTop = mid + 1.6 * u;
+            double gapBottom = mid - 1.6 * u;
+
+            if (CutHasBox)
+            {
+                items.Add(Outlined(Box(x, top, wall, bottom - top, Shade(s.BackgroundColor, 0.85)), Ink));
+                items.Add(Outlined(Box(x, bottom - wall, boxDepth, wall, s.BackgroundColor), Ink));
+                items.Add(Outlined(Box(x, top, boxDepth, wall, s.BackgroundColor), Ink));
+                anchors.Add(new Point(x + boxDepth / 2, bottom - wall / 2));
+            }
+
+            // Yuz (o'yiq joyida uzilgan)
+            WpfColor faceColor = s.BackgroundColor;
+            if (mode == CutMode.Engraved)
+            {
+                items.Add(Outlined(Box(faceX, top, faceT, bottom - top, faceColor), Ink));
+                items.Add(Box(faceX + faceT * 0.5, gapBottom, faceT * 0.5, gapTop - gapBottom, Silver));
+            }
+            else
+            {
+                items.Add(Outlined(Box(faceX, gapTop, faceT, bottom - gapTop, faceColor), Ink));
+                items.Add(Outlined(Box(faceX, top, faceT, gapBottom - top, faceColor), Ink));
+            }
+            anchors.Add(new Point(faceX + faceT / 2, gapTop + 0.6 * u));
+
+            // O'yiqdagi element
+            switch (mode)
+            {
+                case CutMode.RoutedLit:
+                {
+                    double acrylic = 0.35 * u;
+                    items.Add(Outlined(Box(faceX + faceT - acrylic, gapBottom - 0.25 * u, acrylic, gapTop - gapBottom + 0.5 * u, s.FaceColor), Ink));
+                    anchors.Add(new Point(faceX + faceT - acrylic / 2, mid));
+                    break;
+                }
+                case CutMode.PushThrough:
+                {
+                    double back = 0.3 * u;
+                    double protrusion = 0.6 * u;
+                    items.Add(Outlined(Box(faceX - back, gapBottom + 0.05 * u, back + faceT + protrusion, gapTop - gapBottom - 0.1 * u, ClearAcrylic), Ink));
+                    items.Add(Box(faceX + faceT + protrusion - 0.06 * u, gapBottom + 0.05 * u, 0.06 * u, gapTop - gapBottom - 0.1 * u, s.FaceColor));
+                    anchors.Add(new Point(faceX + faceT + protrusion / 2, mid));
+                    break;
+                }
+                case CutMode.RoutedBacking:
+                {
+                    double backingX = faceX - 0.45 * u;
+                    items.Add(Outlined(Box(backingX, gapBottom - 0.8 * u, wall, gapTop - gapBottom + 1.6 * u, s.FaceColor), Ink));
+                    anchors.Add(new Point(backingX + wall / 2, mid));
+                    break;
+                }
+                case CutMode.Engraved:
+                    anchors.Add(new Point(faceX + faceT * 0.75, mid));
+                    break;
+            }
+
+            // LED va nur
+            if (lit && CutHasBox)
+            {
+                double ledY = 0;
+                for (int i = 1; i <= 3; i++)
+                {
+                    ledY = gapBottom + (gapTop - gapBottom) * i / 4;
+                    items.Add(Outlined(Box(x + wall, ledY - 0.15 * u, 0.22 * u, 0.3 * u, LedColor), Ink));
+                }
+                anchors.Add(new Point(x + wall + 0.11 * u, ledY));
+
+                double rayStart = faceX + faceT + (mode == CutMode.PushThrough ? 0.7 * u : 0.15 * u);
+                foreach (double ry in new[] { mid - 1.0 * u, mid, mid + 1.0 * u })
+                    items.Add(Line(rayStart, ry, rayStart + 1.0 * u, ry + (ry - mid) * 0.35, RayColor, th * 0.09));
+                if (mode == CutMode.PushThrough)
+                {
+                    double rx = faceX + faceT + 0.3 * u;
+                    items.Add(Line(rx, gapTop, rx + 0.2 * u, gapTop + 0.8 * u, RayColor, th * 0.09));
+                    items.Add(Line(rx, gapBottom, rx + 0.2 * u, gapBottom - 0.8 * u, RayColor, th * 0.09));
+                }
+            }
+
+            // Qalinlik o'lchami
+            double label = th * 0.8;
+            double dimY = sy + 0.1 * u;
+            if (CutHasBox)
+            {
+                items.AddRange(DimLine(x, dimY, faceX + faceT, dimY, th * 0.3));
+                items.Add(Label(Num.Format(s.BackgroundDepth) + " mm", (x + faceX + faceT) / 2, dimY - label * 0.9, label, 0));
+            }
+
+            // Yozuvlar
+            List<string> labels = CutSectionLabels();
+            double labelX = sx + height * 0.72;
+            for (int i = 0; i < labels.Count && i < anchors.Count; i++)
+            {
+                double ly = sy + height - u * 0.4 - i * th * 1.6;
+                items.Add(Line(anchors[i].X, anchors[i].Y, labelX - th * 0.3, ly, LeaderInk, th * 0.03));
+                corel.Shape text = Label(labels[i], 0, 0, label, 0);
+                text.CenterX = labelX + text.SizeWidth / 2;
+                text.CenterY = ly;
+                items.Add(text);
+            }
+            return items;
+        }
+
         private List<corel.Shape> DrawSection(double sx, double sy, double height)
         {
+            if (s.Letter.IsCut)
+                return DrawCutSection(sx, sy, height);
+
             var items = new List<corel.Shape>();
             var anchors = new List<Point>();
             LetterStyle letter = s.Letter;
@@ -745,10 +998,14 @@ namespace ReklamaMaket.Rendering
                     break;
 
                 case BackgroundKind.Cassette:
-                    items.Add(Outlined(Box(x, sy + 0.4 * u, 0.6 * u, height - 0.8 * u, s.BackgroundColor), Ink));
-                    anchors.Add(new Point(x + 0.3 * u, sy + height - 0.7 * u));
-                    x += 0.6 * u;
+                case BackgroundKind.AcpBox:
+                {
+                    double boxDepth = s.Background.Kind == BackgroundKind.AcpBox ? 1.0 * u : 0.6 * u;
+                    items.Add(Outlined(Box(x, sy + 0.4 * u, boxDepth, height - 0.8 * u, s.BackgroundColor), Ink));
+                    anchors.Add(new Point(x + boxDepth / 2, sy + height - 0.7 * u));
+                    x += boxDepth;
                     break;
+                }
 
                 case BackgroundKind.Lightbox:
                     items.Add(Outlined(Box(x, sy + 0.3 * u, 1.4 * u, height - 0.6 * u, Rgb(0xF4F4F4)), Ink));

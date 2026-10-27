@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Navigation;
@@ -118,7 +119,10 @@ namespace ReklamaMaket
 
         private void SetupLists()
         {
-            LetterCombo.ItemsSource = LetterStyles.All;
+            // Ro'yxat ikki guruhga bo'linadi: hajmli harflar va fonga o'yilgan logo.
+            var letters = new ListCollectionView(LetterStyles.All);
+            letters.GroupDescriptions.Add(new PropertyGroupDescription(nameof(LetterStyle.Group)));
+            LetterCombo.ItemsSource = letters;
             BackgroundCombo.ItemsSource = BackgroundStyles.All;
 
             UnitCombo.ItemsSource = LengthUnit.All;
@@ -174,6 +178,20 @@ namespace ReklamaMaket
             {
                 WriteLength(DepthBox, style.DefaultDepth);
                 LetterDescription.Text = style.Description + (style.Illuminated ? string.Empty : " Yoritilmaydi.");
+                DepthLabel.Text = style.DepthLabel;
+                FaceColorLabel.Text = style.FaceColorLabel;
+                ReturnColorLabel.Text = style.ReturnColorLabel;
+
+                // O'yilgan logoda bort yo'q (push-through'dan tashqari) — qator yashiriladi.
+                Visibility returnRow = style.ReturnColorLabel == "—" ? Visibility.Collapsed : Visibility.Visible;
+                ReturnColorLabel.Visibility = returnRow;
+                ReturnButton.Visibility = returnRow;
+                ReturnHex.Visibility = returnRow;
+                KeepColorsCheck.IsEnabled = !style.IsCut || style.Cut == CutMode.RoutedLit;
+
+                if (style.IsCut && BackgroundCombo.SelectedItem is BackgroundStyle background && !background.CanBeCut)
+                    SelectCutBackground(style);
+
                 UpdateColorControls();
             }
             finally
@@ -181,6 +199,16 @@ namespace ReklamaMaket
                 suppressEvents = previous;
             }
             ScheduleRefresh();
+        }
+
+        /// <summary>O'yilgan logo uchun fonni alyukobondga almashtiradi: yonadigan — quti, yonmaydigan — panel.</summary>
+        private void SelectCutBackground(LetterStyle style)
+        {
+            BackgroundKind kind = style.Illuminated ? BackgroundKind.AcpBox : BackgroundKind.Panel;
+            BackgroundStyle background = BackgroundStyles.All.First(b => b.Kind == kind);
+            BackgroundCombo.SelectedItem = background;
+            ApplyBackgroundStyle(background);
+            SetStatus("O'yilgan logo uchun fon \"" + background.Name + "\" ga almashtirildi.", false);
         }
 
         private void ApplyBackgroundStyle(BackgroundStyle style)
@@ -195,6 +223,7 @@ namespace ReklamaMaket
                 BackgroundDescription.Text = style.Description;
                 PatternPanel.Visibility = style.HasPattern ? Visibility.Visible : Visibility.Collapsed;
                 LightingPanel.Visibility = style.SupportsLighting ? Visibility.Visible : Visibility.Collapsed;
+                EngravedBorderCheck.Visibility = style.CanHaveBorder ? Visibility.Visible : Visibility.Collapsed;
                 PatternCombo.SelectedIndex = style.DefaultPattern;
                 BackgroundLightCombo.SelectedIndex = Array.IndexOf(BackgroundLights.All, style.DefaultLight);
                 AutoSizeCheck.IsEnabled = style.Kind != BackgroundKind.Wall;
@@ -258,6 +287,7 @@ namespace ReklamaMaket
                 KeepLogoColors = KeepColorsCheck.IsChecked == true,
                 Background = background,
                 BackgroundColor = backgroundColor,
+                EngravedBorder = background.CanHaveBorder && EngravedBorderCheck.IsChecked == true,
                 AutoBackgroundSize = auto,
                 BackgroundWidth = backgroundWidth,
                 BackgroundHeight = backgroundHeight,

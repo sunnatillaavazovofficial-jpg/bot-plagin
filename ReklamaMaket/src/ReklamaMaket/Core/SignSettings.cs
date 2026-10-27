@@ -52,6 +52,9 @@ namespace ReklamaMaket.Core
         /// <summary>Fonning qaysi joyi yonadi (gulli va reykali fonlar uchun).</summary>
         public BackgroundLight BackgroundLight { get; set; } = BackgroundLight.None;
 
+        /// <summary>Fon chetida o'yilgan (gravirovka) ramka chizig'i.</summary>
+        public bool EngravedBorder { get; set; }
+
         /// <summary>Fon o'lchami = logo + chetdan joy.</summary>
         public bool AutoBackgroundSize { get; set; } = true;
 

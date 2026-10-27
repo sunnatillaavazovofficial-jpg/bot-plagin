@@ -83,20 +83,27 @@ namespace ReklamaMaket.Ai
             BackgroundStyle background = s.Background;
 
             text.AppendLine("Sign design (as set in the plugin):");
-            text.AppendLine("- Logo letters: " + letter.EnglishName + " — " + letter.PromptDetails + ".");
-
-            string colours = s.KeepLogoColors
-                ? "faces keep the original logo colours"
-                : "face " + ColorMath.Describe(s.FaceColor);
-            colours += ", returns (sides) " + ColorMath.Describe(s.ReturnColor);
-            if (rules.LettersLit)
-                colours += ", LED light " + ColorMath.Describe(s.LightColor);
-            text.AppendLine("- Letter colours: " + colours + ".");
-
-            if (rules.CanBe3D)
+            if (letter.IsCut)
             {
-                text.AppendLine("- Letter depth: " + Num.Format(s.Depth) + " mm" +
-                                (letter.OnStandoffs ? ", mounted on about 30 mm spacers so the letters float off the background" : string.Empty) + ".");
+                AppendCutLogo(text, s, rules);
+            }
+            else
+            {
+                text.AppendLine("- Logo letters: " + letter.EnglishName + " — " + letter.PromptDetails + ".");
+
+                string colours = s.KeepLogoColors
+                    ? "faces keep the original logo colours"
+                    : "face " + ColorMath.Describe(s.FaceColor);
+                colours += ", returns (sides) " + ColorMath.Describe(s.ReturnColor);
+                if (rules.LettersLit)
+                    colours += ", LED light " + ColorMath.Describe(s.LightColor);
+                text.AppendLine("- Letter colours: " + colours + ".");
+
+                if (rules.CanBe3D)
+                {
+                    text.AppendLine("- Letter depth: " + Num.Format(s.Depth) + " mm" +
+                                    (letter.OnStandoffs ? ", mounted on about 30 mm spacers so the letters float off the background" : string.Empty) + ".");
+                }
             }
             text.AppendLine("- Logo size: " + Num.Format(s.LogoWidth) + " × " + Num.Format(s.LogoHeight) + " mm, " + Placement(s.Align) + " on the background.");
 
@@ -113,15 +120,55 @@ namespace ReklamaMaket.Ai
             }
             text.AppendLine(backgroundLine + ".");
 
+            if (s.EngravedBorder && background.CanHaveBorder)
+                text.AppendLine("- A thin engraved border line (V-groove showing bare silver aluminium) runs around the face, inset from the edges.");
+
             if (background.SupportsLighting)
                 text.AppendLine("- Background lighting: " + (rules.BackgroundLit ? BackgroundLights.Prompt(s.BackgroundLight) : BackgroundLights.Prompt(BackgroundLight.None)) + ".");
-            else if (background.Kind == BackgroundKind.Lightbox)
+            else if (background.Kind == BackgroundKind.Lightbox && !letter.IsCut)
                 text.AppendLine("- Background lighting: " + (rules.BackgroundLit ? "the lightbox face glows evenly" : "the lightbox is not illuminated") + ".");
 
-            if (!rules.CanBe3D)
+            if (letter.IsCut)
+            {
+                if (!rules.CanBe3D && letter.Illuminated)
+                    text.AppendLine("- Important: the logo is smaller than 20 cm, so it is only a flat cut-out and is NOT illuminated.");
+                else if (letter.Illuminated && !rules.CanLight)
+                    text.AppendLine("- Important: the box is thinner than 4 cm, so the cut-out logo is NOT illuminated.");
+            }
+            else if (!rules.CanBe3D)
                 text.AppendLine("- Important: the logo is smaller than 20 cm, so it is made as FLAT cut-out letters with no depth, and it is NOT illuminated.");
             else if (letter.Illuminated && !rules.CanLight)
                 text.AppendLine("- Important: the letters are thinner than 4 cm, so they are NOT illuminated (no LEDs inside).");
+        }
+
+        /// <summary>Fonga o'yilgan logo tavsifi — alohida harf emasligi aniq aytiladi.</summary>
+        private static void AppendCutLogo(StringBuilder text, SignSettings s, RuleResult rules)
+        {
+            LetterStyle letter = s.Letter;
+            CutMode mode = letter.Cut == CutMode.PushThrough && !rules.CanBe3D ? CutMode.RoutedLit : letter.Cut;
+            text.AppendLine("- The logo is NOT made of separate letters: it is cut into the background face. " +
+                            letter.EnglishName + " — " + letter.PromptDetails + ".");
+
+            switch (mode)
+            {
+                case CutMode.RoutedLit:
+                    text.AppendLine("- Acrylic inlay: " + (s.KeepLogoColors ? "the original logo colours" : ColorMath.Describe(s.FaceColor)) +
+                                    ", " + Num.Format(s.Depth) + " mm thick, flush with the face" +
+                                    (rules.LettersLit ? "; LED light " + ColorMath.Describe(s.LightColor) : string.Empty) + ".");
+                    break;
+                case CutMode.PushThrough:
+                    text.AppendLine("- Push-through letters: " + Num.Format(s.Depth) + " mm acrylic, protruding about " +
+                                    Num.Format(letter.Protrusion(s.Depth)) + " mm from the face; letter face film " +
+                                    ColorMath.Describe(s.FaceColor) + ", acrylic edges " + ColorMath.Describe(s.ReturnColor) + ".");
+                    break;
+                case CutMode.RoutedBacking:
+                    text.AppendLine("- Through the cut-out the backing panel is visible in " + ColorMath.Describe(s.FaceColor) + ".");
+                    break;
+                case CutMode.Engraved:
+                    text.AppendLine("- The engraving shows " + ColorMath.Describe(s.FaceColor) + " (bare aluminium), about " +
+                                    Num.Format(s.Depth) + " mm deep.");
+                    break;
+            }
         }
 
         private static string Placement(LogoAlign align)
@@ -139,7 +186,15 @@ namespace ReklamaMaket.Ai
         private static string Lighting(SignSettings s, RuleResult rules)
         {
             var parts = new List<string>();
-            if (rules.LettersLit)
+            if (rules.LettersLit && s.Letter.Cut == CutMode.RoutedLit)
+            {
+                parts.Add("only the routed logo glows through its acrylic inlays, the rest of the box face stays dark");
+            }
+            else if (rules.LettersLit && s.Letter.Cut == CutMode.PushThrough)
+            {
+                parts.Add("the push-through letters glow on their faces and especially along their protruding edges, the box face stays dark");
+            }
+            else if (rules.LettersLit)
             {
                 LetterStyle letter = s.Letter;
                 if (letter.Has(LightZones.Face)) parts.Add("the letter faces glow");

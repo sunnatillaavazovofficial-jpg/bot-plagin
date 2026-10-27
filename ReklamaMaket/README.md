@@ -8,7 +8,7 @@ yuborib, uning kunduzgi va kechki **real ko'rinishini** oladi (har kim o'z API k
 
 1. Corelda logoni belgilang → panelda **Tanlangan logoni olish**.
 2. Logoning haqiqiy **bo'yi**ni kiriting — eni proporsiya bo'yicha o'zi hisoblanadi.
-3. **Harf dizayni** (harf turi, qalinligi, yuz/bort/nur ranglari) va **fon dizayni**ni tanlang.
+3. **Logo dizayni** (hajmli harf yoki fonga o'yilgan logo, qalinligi, ranglari) va **fon dizayni**ni tanlang.
    Panel tepasida **Kunduzi / Kechasi** ko'rinishi darhol yangilanadi.
 4. **CORELDA DIZAYN CHIZISH** — yangi sahifada quyidagilar chiziladi:
    - kunduzgi ko'rinish (fon + harflar + soya);
@@ -29,12 +29,18 @@ yuborib, uning kunduzgi va kechki **real ko'rinishini** oladi (har kim o'z API k
 | Logo bo'yi **20 sm dan past** | Hajmli (3D) va yoritilgan qilib bo'lmaydi — faqat yassi harf |
 | Qalinligi **4 sm dan kam** | Yoritib bo'lmaydi (ichiga LED sig'maydi) |
 | Yonadigan fon (laytboks, gulli list, setka, reyka) qalinligi 4 sm dan kam | Fon yoritilmaydi |
+| Fonga o'yilgan logo: quti (fon) qalinligi **4 sm dan kam** | O'yiq yoritilmaydi |
+| Fonga o'yilgan logo, fon alyukobond emas (devor, setka, reyka...) | Ogohlantirish: fon panel, kasseta, laytboks yoki alyukobond quti bo'lishi kerak |
 
 Ogohlantirish panelda sariq qutida ko'rinadi, chizishdan oldin yana so'raladi. Davom etilsa,
 dizayn shu cheklov bilan (yassi va/yoki yoritilmagan holda) chiziladi va ChatGPT so'roviga ham
 shunday yoziladi.
 
-## Harf dizaynlari
+## Logo dizaynlari (21)
+
+Ro'yxat panelda ikki guruhga bo'lingan.
+
+### Hajmli harflar (channel letters) — 17
 
 | Nomi | English | Nima yonadi |
 |---|---|---|
@@ -56,7 +62,24 @@ shunday yoziladi.
 | Akril harf, yoritilmaydi | Non-illuminated acrylic letters on standoffs | — |
 | Metall harf, yoritilmaydi | Non-illuminated metal letters | — |
 
-## Fon dizaynlari (10)
+### Fonga o'yilgan logo (alyukobond) — 4
+
+Logo alohida harf emas: alyukobond yuzga o'yib chiqariladi yoki o'yib yoziladi.
+
+| Nomi | English | Qanday yasaladi |
+|---|---|---|
+| O'yib chiqarilgan + akril, yonadi | Routed (cut-out) face with flush acrylic, backlit | o'yiqqa yuz bilan bir tekis akril, ichidan LED — faqat logo yonadi |
+| Push-through: akril harf chiqib turadi | Push-through acrylic letters | qalin akril harf o'yiqdan chiqib turadi, yuzi plyonkali, qirralari yonadi |
+| O'yib chiqarilgan, orqasida rangli panel | Routed face over a contrasting backing panel | ikki qatlam: o'yiqdan orqadagi boshqa rangli panel ko'rinadi, yonmaydi |
+| Gravirovka (o'yib yozilgan) | Engraved (V-groove) logo | frezer bilan o'yib yoziladi, o'yiqda kumush alyuminiy ko'rinadi |
+
+O'yilgan logo tanlanganda fon alyukobond bo'lmasa, panel uni o'zi almashtiradi: yonadigan turga —
+**Alyukobond quti**, yonmaydigan turga — **Kompozit panel**. Ranglar va qalinlik nomlari ham turga mos
+o'zgaradi (masalan: *Akril*, *Plyonka / Qirra*, *Orqa panel*, *O'yiq chuqurligi*). Yonish qoidasi
+(4 sm) bu turlarda harf qalinligiga emas, **quti (fon) qalinligiga** qo'llanadi. Push-through logo 20 sm
+dan past bo'lsa, chiqib turmaydi — yassi o'yiq bo'lib chiziladi.
+
+## Fon dizaynlari (11)
 
 | Nomi | Izoh |
 |---|---|
@@ -65,11 +88,15 @@ shunday yoziladi.
 | Kasseta (bortli panel) | chetlari bukilgan panel |
 | Laytboks fon (yoritiladigan) | butun yuzi yonadi |
 | Akril plita (distansiyada) | shaffof plita, boltlarda |
+| Alyukobond quti (yuzi o'yiladi) | yuzi yonmaydigan quti, ichida LED — o'yilgan logo uchun |
 | Gulli temir list (perforatsiya) | 30 xil gul, orqasiga LED qo'yish mumkin |
 | Ramkadagi setka (temir ramka) | profil quvur ramka + setka, oraliq ustunlar |
 | Yog'och ramkali setka (orqadan yonadi) | yog'och ramka, setka, chetlari bo'ylab nur |
 | Gorizontal temir reykalar (lamel) | kronshteyndagi reykalar, oralig'idan devor ko'rinadi |
 | Vertikal reykali panel | qovurg'ali fasad qoplamasi |
+
+**Chetida o'yilgan ramka chizig'i (gravirovka)** — alyukobond fonlarda (panel, kasseta, laytboks,
+alyukobond quti) yuz chetidan ichkarida ingichka o'yilgan chiziq qo'shiladi.
 
 **Gullar (30 ta)** — gulli list va setkalar uchun: olti burchakli setka (5 xil qalinlik), dumaloq teshik (5),
 xochsimon teshik (4), kvadrat teshik va kvadrat setka (3), uzunchoq tirqish (4), romb setka / prosechka (9).
@@ -123,7 +150,7 @@ ReklamaMaket/
     ├── AppUI.xslt, UserUI.xslt     Corel paneli, menyu va tugma
     ├── DockerUI.xaml(.cs)          panel
     ├── Styles/Theme.xaml           panel ranglari va uslublari
-    ├── Designs/LetterStyle.cs      harf dizaynlari ro'yxati
+    ├── Designs/LetterStyle.cs      logo dizaynlari ro'yxati (hajmli harflar + o'yilgan logo)
     ├── Designs/BackgroundStyle.cs  fon dizaynlari ro'yxati
     ├── Designs/PatternStyle.cs     gullar (perforatsiya, setka) ro'yxati
     ├── Core/                       sozlamalar, qoidalar (SignRules), logo olish/eksport
@@ -146,6 +173,9 @@ new LetterStyle("Neon chiziqli", "Neon-trim letters",
     "Yuz: metall", "Bort: metall + neon",
     "letters with a glowing neon strip along the outline"), // ChatGPT uchun tavsif
 ```
+
+Fonga o'yilgan logo bo'lsa, oxiriga `{ Cut = CutMode.RoutedLit }` (yoki `PushThrough`, `RoutedBacking`,
+`Engraved`) qo'shiladi — u ro'yxatda "Fonga o'yilgan logo" guruhiga tushadi.
 
 ## Muammolar
 
