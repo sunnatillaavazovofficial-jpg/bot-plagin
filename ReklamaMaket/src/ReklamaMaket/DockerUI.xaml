@@ -196,7 +196,7 @@
 
                         <StackPanel x:Name="PatternPanel" Visibility="Collapsed" Margin="0,0,0,6">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="Gul (naqsh)"/>
-                            <ComboBox x:Name="PatternCombo" MaxDropDownHeight="420" SelectionChanged="Setting_Changed">
+                            <ComboBox x:Name="PatternCombo" MaxDropDownHeight="420" SelectionChanged="PatternCombo_SelectionChanged">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" Margin="0,1">
@@ -217,7 +217,7 @@
                             <TextBlock Style="{StaticResource FieldLabel}" Text="Fon yoritilishi (qaysi joyi yonadi)"/>
                             <ComboBox x:Name="BackgroundLightCombo" DisplayMemberPath="Name" SelectionChanged="Setting_Changed"/>
                             <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0"
-                                       Text="Nur rangi — harf dizaynidagi «Nur» rangi. Yonishi uchun fon qalinligi kamida 4 sm."/>
+                                       Text="Nur rangi — «Detallar» bo'limida. Yonishi uchun fon qalinligi kamida 4 sm."/>
                         </StackPanel>
 
                         <Grid>
@@ -278,10 +278,20 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 4. Corel -->
+                <!-- 4. Detallar: rang va o'lcham (ro'yxat dizaynga qarab koddan quriladi) -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="4. COREL CHIZMASI"/>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="4. DETALLAR: RANG VA O'LCHAM"/>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,4"
+                                   Text="Bo'sh maydon — dizaynning o'z qiymati (kulrang yozuv). ↺ — asl holiga qaytarish."/>
+                        <StackPanel x:Name="DetailsPanel"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 5. Corel -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="5. COREL CHIZMASI"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -297,10 +307,10 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 5. ChatGPT -->
+                <!-- 6. ChatGPT -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="5. CHATGPT — REAL KO'RINISH"/>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="6. CHATGPT — REAL KO'RINISH"/>
                         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,4"
                                    Text="Har kim o'z OpenAI API kalitini ulaydi. Kalit shu kompyuterda shifrlangan holda saqlanadi."/>
                         <Grid>

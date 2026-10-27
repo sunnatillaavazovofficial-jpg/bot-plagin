@@ -36,11 +36,10 @@ namespace ReklamaMaket.Rendering
         private static readonly WpfColor RayColor = Rgb(0xE0A100);
         private static readonly WpfColor LedColor = Rgb(0xFFD54A);
         private static readonly WpfColor WallSection = Rgb(0xC9C2B8);
-        private static readonly WpfColor Steel = Rgb(0xA3A9AF);
+        private static readonly WpfColor Steel = ColorMath.Steel;
         private static readonly WpfColor ClearAcrylic = Rgb(0xDDE8EE);
-        private static readonly WpfColor Silver = Rgb(0xC9CED3);
+        private static readonly WpfColor Silver = ColorMath.Silver;
 
-        private static readonly WpfColor WallBehind = ColorMath.WallBehind;
         private static readonly WpfColor Diffuser = ColorMath.Diffuser;
 
         private readonly corel.Application app;
@@ -282,25 +281,10 @@ namespace ReklamaMaket.Rendering
             LetterStyle letter = s.Letter;
             if (letter.Has(LightZones.Dots))
             {
-                double spacing, diameter, clearance;
-                if (letter.Face == FaceMaterial.Perforated)
-                {
-                    spacing = Num.Clamp(s.LogoHeight * 0.03, 8, 30);
-                    diameter = spacing * 0.5;
-                    clearance = diameter / 2 + letter.TrimMm * 1.5;
-                }
-                else if (letter.Face == FaceMaterial.Metal)
-                {
-                    spacing = Num.Clamp(s.LogoHeight * 0.12, 40, 200);
-                    diameter = spacing * 0.55;
-                    clearance = diameter / 2 + letter.TrimMm;
-                }
-                else
-                {
-                    spacing = Num.Clamp(s.LogoHeight * 0.07, 20, 100);
-                    diameter = spacing * 0.35;
-                    clearance = diameter / 2 + letter.TrimMm;
-                }
+                double diameter = SignDetails.SizeOf(s, Detail.Dots);
+                double spacing = SignDetails.DotSpacing(s);
+                double trim = SignDetails.SizeOf(s, Detail.Trim);
+                double clearance = diameter / 2 + (letter.Face == FaceMaterial.Perforated ? trim * 1.5 : trim);
 
                 List<Point> points = InsidePoints(spacing * k, clearance * k, letter.Face == FaceMaterial.Perforated, out double scale);
                 dotsTemplate = Temp(Circles(points, diameter * k * scale));
@@ -310,8 +294,8 @@ namespace ReklamaMaket.Rendering
 
             if (letter.Has(LightZones.Pattern))
             {
-                double spacing = Num.Clamp(s.LogoHeight * 0.08, 25, 120);
-                double side = spacing * 0.5;
+                double spacing = SignDetails.FacePatternSpacing(s);
+                double side = SignDetails.SizeOf(s, Detail.FacePattern);
                 List<Point> points = InsidePoints(spacing * k, side * 0.75 * k, true, out double scale);
                 patternTemplate = Temp(Diamonds(points, side * k * scale));
             }
@@ -356,13 +340,17 @@ namespace ReklamaMaket.Rendering
 
                 case BackgroundKind.Lightbox:
                 {
-                    double profile = Num.Clamp(minSide * 0.03, 25, 60) * k;
-                    corel.Shape frame = Box(vx, vy, viewW, viewH, Steel);
-                    if (night)
-                        Fill(frame, Shade(Steel, 0.3));
-                    else
-                        Metallic(frame, Steel);
-                    items.Add(frame);
+                    double profile = SignDetails.SizeOf(s, Detail.Frame) * k;
+                    WpfColor profileColor = SignDetails.ColorOf(s, Detail.Frame);
+                    if (profile > 0)
+                    {
+                        corel.Shape frame = Box(vx, vy, viewW, viewH, profileColor);
+                        if (night)
+                            Fill(frame, Shade(profileColor, 0.3));
+                        else
+                            Metallic(frame, profileColor);
+                        items.Add(frame);
+                    }
                     items.Add(Box(vx + profile, vy + profile, viewW - 2 * profile, viewH - 2 * profile, surface));
                     break;
                 }
@@ -374,12 +362,17 @@ namespace ReklamaMaket.Rendering
                         plate.Transparency.ApplyUniformTransparency(20);
                     items.Add(plate);
 
-                    double d = Num.Clamp(minSide * 0.03, 20, 40) * k;
-                    WpfColor bolt = night ? Shade(Steel, 0.3) : Steel;
+                    double d = SignDetails.SizeOf(s, Detail.Bolts) * k;
+                    WpfColor boltColor = SignDetails.ColorOf(s, Detail.Bolts);
+                    WpfColor bolt = night ? Shade(boltColor, 0.3) : boltColor;
                     foreach (double cx in new[] { vx + d * 1.6, vx + viewW - d * 1.6 })
                     {
                         foreach (double cy in new[] { vy + d * 1.6, vy + viewH - d * 1.6 })
-                            items.Add(Outlined(Circle(cx, cy, d), Shade(bolt, 0.7)));
+                        {
+                            corel.Shape shape = Circle(cx, cy, d);
+                            Fill(shape, bolt);
+                            items.Add(Outlined(shape, Shade(bolt, 0.7)));
+                        }
                     }
                     break;
                 }
@@ -403,11 +396,12 @@ namespace ReklamaMaket.Rendering
 
             if (s.EngravedBorder && s.Background.CanHaveBorder)
             {
-                double inset = Num.Clamp(minSide * 0.04, 25, 80) * k;
-                double width = Num.Clamp(minSide * 0.008, 4, 12) * k;
-                corel.Shape border = Box(vx + inset, vy + inset, viewW - 2 * inset, viewH - 2 * inset, Silver);
+                double inset = SignDetails.SizeOf(s, Detail.BorderInset) * k;
+                double width = SignDetails.SizeOf(s, Detail.Border) * k;
+                WpfColor borderColor = SignDetails.ColorOf(s, Detail.Border);
+                corel.Shape border = Box(vx + inset, vy + inset, viewW - 2 * inset, viewH - 2 * inset, borderColor);
                 border.Fill.ApplyNoFill();
-                Stroke(border, width, night ? Shade(Silver, 0.3) : Silver);
+                Stroke(border, width, night ? Shade(borderColor, 0.3) : borderColor);
                 items.Add(border);
             }
         }
@@ -420,18 +414,19 @@ namespace ReklamaMaket.Rendering
             BackgroundStyle background = s.Background;
             bool lit = night && rules.BackgroundLit;
             bool lightBox = s.BackgroundLight != BackgroundLight.None;
-            double frameWidth = background.FrameWidth;
+            double frameWidth = SignDetails.SizeOf(s, Detail.Frame);
+            WpfColor frameColor = SignDetails.ColorOf(s, Detail.Frame);
             Rect inner = new Rect(frameWidth, frameWidth,
                 Math.Max(lay.BackgroundWidth - 2 * frameWidth, 1), Math.Max(lay.BackgroundHeight - 2 * frameWidth, 1));
 
             // Ramka
             if (frameWidth > 0)
             {
-                corel.Shape frame = LocalBox(vx, vy, BackgroundRect, background.FrameColor);
+                corel.Shape frame = LocalBox(vx, vy, BackgroundRect, frameColor);
                 if (night)
-                    Fill(frame, Shade(background.FrameColor, 0.3));
+                    Fill(frame, Shade(frameColor, 0.3));
                 else
-                    Metallic(frame, background.FrameColor);
+                    Metallic(frame, frameColor);
                 items.Add(frame);
             }
 
@@ -446,8 +441,8 @@ namespace ReklamaMaket.Rendering
                 double edge = Num.Clamp(Math.Min(inner.Width, inner.Height) * 0.03, 15, 40);
                 holeArea = new Rect(inner.X + edge, inner.Y + edge, Math.Max(inner.Width - 2 * edge, 1), Math.Max(inner.Height - 2 * edge, 1));
             }
-            List<Hole> holes = PatternGeometry.Holes(s.Pattern, holeArea, out _);
-            WpfColor behind = lightBox ? Diffuser : Shade(WallBehind, 0.75);
+            List<Hole> holes = PatternGeometry.Holes(SignDetails.Pattern(s), holeArea, out _);
+            WpfColor behind = lightBox ? Diffuser : Shade(SignDetails.ColorOf(s, Detail.Wall), 0.75);
             if (!lit)
             {
                 items.Add(Polygons(holes.Select(h => h.Points), vx, vy, night ? Shade(behind, 0.15) : behind));
@@ -464,15 +459,15 @@ namespace ReklamaMaket.Rendering
             }
 
             // Ramkadagi setka: oraliq ustunlar (rasmdagidek)
-            if (background.Kind == BackgroundKind.FramedMesh && inner.Width > 1500)
+            if (background.Kind == BackgroundKind.FramedMesh && frameWidth > 0 && inner.Width > 1500)
             {
                 int bars = (int)Math.Round(inner.Width / 1000) - 1;
                 for (int i = 1; i <= bars; i++)
                 {
                     double x = inner.X + inner.Width * i / (bars + 1);
-                    corel.Shape bar = LocalBox(vx, vy, new Rect(x - frameWidth * 0.4, inner.Y, frameWidth * 0.8, inner.Height), background.FrameColor);
+                    corel.Shape bar = LocalBox(vx, vy, new Rect(x - frameWidth * 0.4, inner.Y, frameWidth * 0.8, inner.Height), frameColor);
                     if (night)
-                        Fill(bar, Shade(background.FrameColor, 0.3));
+                        Fill(bar, Shade(frameColor, 0.3));
                     items.Add(bar);
                 }
             }
@@ -484,12 +479,14 @@ namespace ReklamaMaket.Rendering
             bool horizontal = s.Background.Kind == BackgroundKind.HorizontalSlats;
             bool lit = night && rules.BackgroundLit;
             WpfColor slatColor = night ? Shade(s.BackgroundColor, 0.25) : s.BackgroundColor;
-            List<Rect> slats = PatternGeometry.Slats(BackgroundRect, horizontal, out _);
+            WpfColor wall = SignDetails.ColorOf(s, Detail.Wall);
+            List<Rect> slats = PatternGeometry.Slats(BackgroundRect, horizontal,
+                SignDetails.SizeOf(s, Detail.SlatWidth), SignDetails.SizeOf(s, Detail.SlatGap));
 
             if (horizontal)
             {
                 // Oraliqlardan devor va vertikal kronshteynlar ko'rinadi
-                items.Add(LocalBox(vx, vy, BackgroundRect, night ? Shade(WallBehind, 0.18) : WallBehind));
+                items.Add(LocalBox(vx, vy, BackgroundRect, night ? Shade(wall, 0.18) : wall));
                 int posts = Math.Max(2, (int)Math.Round(lay.BackgroundWidth / 1200) + 1);
                 for (int i = 0; i < posts; i++)
                 {
@@ -511,7 +508,7 @@ namespace ReklamaMaket.Rendering
                     int current = level;
                     var group = gaps.Where(g => PatternGeometry.Level(s.BackgroundLight, new Point(g.X + g.Width / 2, g.Y + g.Height / 2), BackgroundRect, lay.Logo) == current)
                                     .Select(RectPoints);
-                    items.Add(Polygons(group, vx, vy, LightLevelColor(WallBehind, current)));
+                    items.Add(Polygons(group, vx, vy, LightLevelColor(wall, current)));
                 }
             }
 
@@ -531,7 +528,7 @@ namespace ReklamaMaket.Rendering
 
         /// <summary>Kechasi yorug'lik darajasiga mos rang (0 — qorong'i, eng yuqori — nur rangi).</summary>
         private WpfColor LightLevelColor(WpfColor behind, int level) =>
-            ColorMath.LightLevel(behind, s.LightColor, level, PatternGeometry.LightLevels);
+            ColorMath.LightLevel(behind, SignDetails.ColorOf(s, Detail.BackgroundLight), level, PatternGeometry.LightLevels);
 
         /// <summary>Fon ichidagi to'rtburchak (mm, chap-yuqoridan, Y pastga) — sahifaga.</summary>
         private corel.Shape LocalBox(double vx, double vy, Rect r, WpfColor color)
@@ -573,7 +570,7 @@ namespace ReklamaMaket.Rendering
             bool volumetric = rules.CanBe3D;
             bool lit = night && rules.LettersLit;
             WpfColor light = s.LightColor;
-            double glow = Num.Clamp(s.LogoHeight * 0.06, 15, 150) * k;
+            double glow = SignDetails.SizeOf(s, Detail.Glow) * k;
 
             // 0. Kunduzi — harfning fonga tushgan soyasi (chuqurlik hissi, oq fonda oq harf ham ko'rinadi)
             if (!night && volumetric)
@@ -600,7 +597,7 @@ namespace ReklamaMaket.Rendering
             }
 
             // 2. Chet: bort qirrasi yoki yonadigan kontur
-            double trim = volumetric ? letter.TrimMm * k : 0;
+            double trim = volumetric ? SignDetails.SizeOf(s, Detail.Trim) * k : 0;
             bool rimLit = lit && (letter.Has(LightZones.SideFull) || letter.Has(LightZones.SidePartial) || letter.Has(LightZones.Rim));
             if (rimLit || trim > 0)
             {
@@ -644,8 +641,7 @@ namespace ReklamaMaket.Rendering
             // 4. Nuqtalar (LED, lampochka, perforatsiya) va naqsh
             if (dotsTemplate != null)
             {
-                WpfColor dayColor = letter.Face == FaceMaterial.Perforated ? Shade(s.FaceColor, 2.4)
-                    : letter.Face == FaceMaterial.Metal ? Rgb(0xF3EBD8) : Rgb(0xD9D9D9);
+                WpfColor dayColor = SignDetails.ColorOf(s, Detail.Dots);
                 bool dotsLit = lit && letter.Has(LightZones.Dots);
                 if (dotsLit && dotGlowTemplate != null)
                 {
@@ -662,7 +658,7 @@ namespace ReklamaMaket.Rendering
             if (patternTemplate != null)
             {
                 corel.Shape pattern = Dup(patternTemplate, dx, dy);
-                WpfColor dayColor = Rgb(0xE8C766);
+                WpfColor dayColor = SignDetails.ColorOf(s, Detail.FacePattern);
                 Fill(pattern, lit ? light : (night ? Shade(dayColor, 0.25) : dayColor));
                 items.Add(pattern);
             }
@@ -674,7 +670,7 @@ namespace ReklamaMaket.Rendering
             LetterStyle letter = s.Letter;
             bool lit = night && rules.LettersLit;
             WpfColor light = s.LightColor;
-            double glow = Num.Clamp(s.LogoHeight * 0.06, 15, 150) * k;
+            double glow = SignDetails.SizeOf(s, Detail.Glow) * k;
             // 20 sm dan past logo chiqib turolmaydi — yassi o'yiq bo'ladi
             CutMode mode = letter.Cut == CutMode.PushThrough && !rules.CanBe3D ? CutMode.RoutedLit : letter.Cut;
             WpfColor edge = Shade(s.BackgroundColor, 0.45);
@@ -683,7 +679,7 @@ namespace ReklamaMaket.Rendering
             {
                 if (!night)
                 {
-                    double offset = Num.Clamp(letter.Protrusion(s.Depth) * 0.35, 3, 20) * k;
+                    double offset = Num.Clamp(SignDetails.SizeOf(s, Detail.Protrusion) * 0.35, 3, 20) * k;
                     corel.Shape shadow = Dup(silhouette, dx + offset, dy - offset);
                     Fill(shadow, Rgb(0x000000));
                     shadow.Outline.SetNoOutline();
@@ -696,7 +692,7 @@ namespace ReklamaMaket.Rendering
                 WpfColor rimColor = lit ? light : (night ? Shade(s.ReturnColor, 0.25) : s.ReturnColor);
                 corel.Shape rim = Dup(silhouette, dx, dy);
                 Fill(rim, rimColor);
-                Stroke(rim, Math.Max(letter.TrimMm, 3) * k * 2, rimColor);
+                Stroke(rim, SignDetails.SizeOf(s, Detail.Trim) * k * 2, rimColor);
                 items.Add(rim);
             }
             else if (lit && mode == CutMode.RoutedLit)
@@ -733,7 +729,10 @@ namespace ReklamaMaket.Rendering
         }
 
         /// <summary>Soya siljishi (mm): qalinlik va distansiyaga bog'liq.</summary>
-        private double ShadowOffset() => Num.Clamp((s.Depth + (s.Letter.OnStandoffs ? 30 : 0)) * 0.3, 4, 60);
+        private double ShadowOffset() => Num.Clamp((s.Depth + (s.Letter.OnStandoffs ? Standoff : 0)) * 0.3, 4, 60);
+
+        /// <summary>Distansiya (harf va fon orasidagi masofa), mm.</summary>
+        private double Standoff => SignDetails.SizeOf(s, Detail.Standoff);
 
         /// <summary>Konturdan tarqaladigan yumshoq nur: bir necha shaffof qatlam.</summary>
         private void Glow(List<corel.Shape> items, double dx, double dy, WpfColor color, double width, int layers)
@@ -781,7 +780,7 @@ namespace ReklamaMaket.Rendering
             }
         }
 
-        private bool OnSpacers => s.Letter.OnStandoffs && rules.CanBe3D;
+        private bool OnSpacers => s.Letter.OnStandoffs && rules.CanBe3D && Standoff > 0;
 
         private List<string> SectionLabels()
         {
@@ -793,7 +792,7 @@ namespace ReklamaMaket.Rendering
             if (background != null)
                 labels.Add(background);
             if (OnSpacers)
-                labels.Add("Distansiya ~30 mm");
+                labels.Add("Distansiya " + Num.Format(Standoff) + " mm");
             if (rules.CanBe3D)
             {
                 labels.Add(s.Letter.Has(LightZones.Halo) ? "Orqa: shaffof akril" : "Orqa: PVX / alyumin");
@@ -828,7 +827,7 @@ namespace ReklamaMaket.Rendering
                     labels.Add("Akril " + Num.Format(s.Depth) + " mm, yuz bilan bir tekis");
                     break;
                 case CutMode.PushThrough:
-                    labels.Add("Akril harf " + Num.Format(s.Depth) + " mm, " + Num.Format(s.Letter.Protrusion(s.Depth)) + " mm chiqib turadi");
+                    labels.Add("Akril harf " + Num.Format(s.Depth) + " mm, " + Num.Format(SignDetails.SizeOf(s, Detail.Protrusion)) + " mm chiqib turadi");
                     break;
                 case CutMode.RoutedBacking:
                     labels.Add("Orqa panel (boshqa rang)");
@@ -1043,10 +1042,10 @@ namespace ReklamaMaket.Rendering
                                 items.Add(Box(x + 0.12 * u, sy + height * i / 4 - 0.15 * u, 0.22 * u, 0.3 * u, LedColor));
                         }
                     }
-                    if (s.Background.FrameWidth > 0)
+                    if (SignDetails.SizeOf(s, Detail.Frame) > 0)
                     {
                         foreach (double fy in new[] { sy + 0.3 * u, sy + height - 0.65 * u })
-                            items.Add(Outlined(Box(x + boxDepth - 0.35 * u, fy, 0.35 * u, 0.35 * u, s.Background.FrameColor), Ink));
+                            items.Add(Outlined(Box(x + boxDepth - 0.35 * u, fy, 0.35 * u, 0.35 * u, SignDetails.ColorOf(s, Detail.Frame)), Ink));
                     }
                     double sheetX = x + boxDepth;
                     for (double py = sy + 0.4 * u; py < sy + height - 0.6 * u; py += 0.35 * u)
@@ -1124,7 +1123,7 @@ namespace ReklamaMaket.Rendering
                 items.Add(Outlined(Box(lx + depth - faceT, y1, faceT, y2 - y1, s.FaceColor), Ink));
                 anchors.Add(new Point(lx + depth - faceT / 2, mid + 2 * u));
 
-                if (letter.TrimMm > 0)
+                if (SignDetails.SizeOf(s, Detail.Trim) > 0)
                 {
                     foreach (double ty in new[] { y2 - 0.06 * u, y1 - 0.06 * u })
                         items.Add(Box(lx + depth - faceT - 0.25 * u, ty, faceT + 0.25 * u, 0.12 * u, s.ReturnColor));
@@ -1183,7 +1182,7 @@ namespace ReklamaMaket.Rendering
             {
                 double spacerY = dimY - label * 2.3;
                 items.AddRange(DimLine(lx - spacer, spacerY, lx, spacerY, th * 0.3));
-                items.Add(Label("30", lx - spacer / 2, spacerY - label * 0.9, label, 0));
+                items.Add(Label(Num.Format(Standoff), lx - spacer / 2, spacerY - label * 0.9, label, 0));
             }
 
             // Yozuvlar (chiziq bilan bog'langan)

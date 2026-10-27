@@ -53,7 +53,6 @@ namespace ReklamaMaket.Rendering
             Color color = s.BackgroundColor;
             bool lit = night && rules.BackgroundLit;
             Color surface = night ? (lit ? ColorMath.Lit(color) : ColorMath.Shade(color, 0.22)) : color;
-            Color steel = ColorMath.Rgb(0xA3A9AF);
             double minSide = Math.Min(width, height) / px;
             var canvas = new Grid { Width = width, Height = height };
 
@@ -77,8 +76,10 @@ namespace ReklamaMaket.Rendering
 
                 case BackgroundKind.Lightbox:
                 {
-                    double profile = Num.Clamp(minSide * 0.03, 25, 60) * px;
-                    canvas.Children.Add(new Rectangle { Fill = night ? Brush(ColorMath.Shade(steel, 0.3)) : Metal(steel) });
+                    double profile = SignDetails.SizeOf(s, Detail.Frame) * px;
+                    Color profileColor = SignDetails.ColorOf(s, Detail.Frame);
+                    if (profile > 0)
+                        canvas.Children.Add(new Rectangle { Fill = night ? Brush(ColorMath.Shade(profileColor, 0.3)) : Metal(profileColor) });
                     var face = new Rectangle { Margin = new Thickness(profile), Fill = Brush(surface) };
                     if (lit)
                         face.Effect = new DropShadowEffect { ShadowDepth = 0, BlurRadius = 18, Color = surface, Opacity = 0.8 };
@@ -95,8 +96,9 @@ namespace ReklamaMaket.Rendering
                         Stroke = Brush(ColorMath.Shade(surface, 0.7)),
                         StrokeThickness = 1
                     });
-                    double d = Num.Clamp(minSide * 0.03, 20, 40) * px;
-                    Brush bolt = Brush(night ? ColorMath.Shade(steel, 0.3) : steel);
+                    double d = SignDetails.SizeOf(s, Detail.Bolts) * px;
+                    Color boltColor = SignDetails.ColorOf(s, Detail.Bolts);
+                    Brush bolt = Brush(night ? ColorMath.Shade(boltColor, 0.3) : boltColor);
                     foreach (HorizontalAlignment h in new[] { HorizontalAlignment.Left, HorizontalAlignment.Right })
                     {
                         foreach (VerticalAlignment v in new[] { VerticalAlignment.Top, VerticalAlignment.Bottom })
@@ -108,7 +110,9 @@ namespace ReklamaMaket.Rendering
                                 Fill = bolt,
                                 HorizontalAlignment = h,
                                 VerticalAlignment = v,
-                                Margin = new Thickness(d * 1.1)
+                                Margin = new Thickness(d * 1.1),
+                                Stroke = Brush(ColorMath.Shade(boltColor, 0.7)),
+                                StrokeThickness = 0.5
                             });
                         }
                     }
@@ -138,12 +142,14 @@ namespace ReklamaMaket.Rendering
 
             if (s.EngravedBorder && s.Background.CanHaveBorder)
             {
-                Color silver = ColorMath.Rgb(0xC9CED3);
+                Color borderColor = SignDetails.ColorOf(s, Detail.Border);
+                double line = SignDetails.SizeOf(s, Detail.Border) * px;
                 canvas.Children.Add(new Rectangle
                 {
-                    Margin = new Thickness(Num.Clamp(minSide * 0.04, 25, 80) * px),
-                    Stroke = Brush(night ? ColorMath.Shade(silver, 0.3) : silver),
-                    StrokeThickness = Math.Max(Num.Clamp(minSide * 0.008, 4, 12) * px, 1)
+                    // Corel chizmasidagidek chiziq o'rtasi chetdan "inset" masofada
+                    Margin = new Thickness(Math.Max(SignDetails.SizeOf(s, Detail.BorderInset) * px - line / 2, 0)),
+                    Stroke = Brush(night ? ColorMath.Shade(borderColor, 0.3) : borderColor),
+                    StrokeThickness = Math.Max(line, 1)
                 });
             }
             return canvas;
@@ -157,11 +163,13 @@ namespace ReklamaMaket.Rendering
             var canvas = new Canvas { Width = lay.BackgroundWidth * px, Height = lay.BackgroundHeight * px };
             var full = new Rect(0, 0, lay.BackgroundWidth, lay.BackgroundHeight);
             bool lit = night && rules.BackgroundLit;
-            double frameWidth = background.FrameWidth;
+            double frameWidth = SignDetails.SizeOf(s, Detail.Frame);
+            Color frameColor = SignDetails.ColorOf(s, Detail.Frame);
+            Color light = SignDetails.ColorOf(s, Detail.BackgroundLight);
             var inner = new Rect(frameWidth, frameWidth, Math.Max(full.Width - 2 * frameWidth, 1), Math.Max(full.Height - 2 * frameWidth, 1));
 
             if (frameWidth > 0)
-                AddRect(canvas, full, px, night ? Brush(ColorMath.Shade(background.FrameColor, 0.3)) : Metal(background.FrameColor));
+                AddRect(canvas, full, px, night ? Brush(ColorMath.Shade(frameColor, 0.3)) : Metal(frameColor));
             Color sheet = night ? ColorMath.Shade(s.BackgroundColor, lit ? 0.45 : 0.22) : s.BackgroundColor;
             AddRect(canvas, inner, px, Brush(sheet));
 
@@ -171,8 +179,8 @@ namespace ReklamaMaket.Rendering
                 double edge = Num.Clamp(Math.Min(inner.Width, inner.Height) * 0.03, 15, 40);
                 holeArea = new Rect(inner.X + edge, inner.Y + edge, Math.Max(inner.Width - 2 * edge, 1), Math.Max(inner.Height - 2 * edge, 1));
             }
-            var holes = PatternGeometry.Holes(s.Pattern, holeArea, out _);
-            Color behind = s.BackgroundLight != BackgroundLight.None ? ColorMath.Diffuser : ColorMath.Shade(ColorMath.WallBehind, 0.75);
+            var holes = PatternGeometry.Holes(SignDetails.Pattern(s), holeArea, out _);
+            Color behind = s.BackgroundLight != BackgroundLight.None ? ColorMath.Diffuser : ColorMath.Shade(SignDetails.ColorOf(s, Detail.Wall), 0.75);
             if (!lit)
             {
                 canvas.Children.Add(Polygons(holes.ConvertAll(h => h.Points), px, Brush(night ? ColorMath.Shade(behind, 0.15) : behind)));
@@ -182,22 +190,22 @@ namespace ReklamaMaket.Rendering
                 for (int level = 0; level < PatternGeometry.LightLevels; level++)
                 {
                     var group = holes.FindAll(h => PatternGeometry.Level(s.BackgroundLight, h.Center, full, lay.Logo) == level).ConvertAll(h => h.Points);
-                    Color color = ColorMath.LightLevel(behind, s.LightColor, level, PatternGeometry.LightLevels);
+                    Color color = ColorMath.LightLevel(behind, light, level, PatternGeometry.LightLevels);
                     var path = Polygons(group, px, Brush(color));
                     if (level == PatternGeometry.LightLevels - 1)
-                        path.Effect = new DropShadowEffect { ShadowDepth = 0, BlurRadius = 10, Color = s.LightColor, Opacity = 0.9 };
+                        path.Effect = new DropShadowEffect { ShadowDepth = 0, BlurRadius = 10, Color = light, Opacity = 0.9 };
                     canvas.Children.Add(path);
                 }
             }
 
-            if (background.Kind == BackgroundKind.FramedMesh && inner.Width > 1500)
+            if (background.Kind == BackgroundKind.FramedMesh && frameWidth > 0 && inner.Width > 1500)
             {
                 int bars = (int)Math.Round(inner.Width / 1000) - 1;
                 for (int i = 1; i <= bars; i++)
                 {
                     double x = inner.X + inner.Width * i / (bars + 1);
                     AddRect(canvas, new Rect(x - frameWidth * 0.4, inner.Y, frameWidth * 0.8, inner.Height), px,
-                        Brush(night ? ColorMath.Shade(background.FrameColor, 0.3) : background.FrameColor));
+                        Brush(night ? ColorMath.Shade(frameColor, 0.3) : frameColor));
                 }
             }
             return canvas;
@@ -212,11 +220,12 @@ namespace ReklamaMaket.Rendering
             bool horizontal = s.Background.Kind == BackgroundKind.HorizontalSlats;
             bool lit = night && rules.BackgroundLit;
             Color slatColor = night ? ColorMath.Shade(s.BackgroundColor, 0.25) : s.BackgroundColor;
-            var slats = PatternGeometry.Slats(full, horizontal, out _);
+            Color wall = SignDetails.ColorOf(s, Detail.Wall);
+            var slats = PatternGeometry.Slats(full, horizontal, SignDetails.SizeOf(s, Detail.SlatWidth), SignDetails.SizeOf(s, Detail.SlatGap));
 
             if (horizontal)
             {
-                AddRect(canvas, full, px, Brush(night ? ColorMath.Shade(ColorMath.WallBehind, 0.18) : ColorMath.WallBehind));
+                AddRect(canvas, full, px, Brush(night ? ColorMath.Shade(wall, 0.18) : wall));
                 int posts = Math.Max(2, (int)Math.Round(full.Width / 1200) + 1);
                 for (int i = 0; i < posts; i++)
                 {
@@ -236,7 +245,7 @@ namespace ReklamaMaket.Rendering
                 {
                     var group = gaps.FindAll(g => PatternGeometry.Level(s.BackgroundLight, new Point(g.X + g.Width / 2, g.Y + g.Height / 2), full, lay.Logo) == level)
                                     .ConvertAll(g => new[] { g.TopLeft, g.TopRight, g.BottomRight, g.BottomLeft });
-                    var path = Polygons(group, px, Brush(ColorMath.LightLevel(ColorMath.WallBehind, s.LightColor, level, PatternGeometry.LightLevels)));
+                    var path = Polygons(group, px, Brush(ColorMath.LightLevel(wall, SignDetails.ColorOf(s, Detail.BackgroundLight), level, PatternGeometry.LightLevels)));
                     path.Effect = new BlurEffect { Radius = 6 };
                     canvas.Children.Add(path);
                 }
@@ -302,7 +311,7 @@ namespace ReklamaMaket.Rendering
             LetterStyle letter = s.Letter;
             bool lit = night && rules.LettersLit;
             Color light = s.LightColor;
-            double glow = Num.Clamp(s.LogoHeight * 0.06, 15, 150) * px;
+            double glow = SignDetails.SizeOf(s, Detail.Glow) * px;
             CutMode mode = letter.Cut == CutMode.PushThrough && !rules.CanBe3D ? CutMode.RoutedLit : letter.Cut;
             Color edge = ColorMath.Shade(s.BackgroundColor, 0.45);
 
@@ -310,7 +319,7 @@ namespace ReklamaMaket.Rendering
             {
                 if (!night)
                 {
-                    double offset = Num.Clamp(letter.Protrusion(s.Depth) * 0.35, 3, 20) * px;
+                    double offset = Num.Clamp(SignDetails.SizeOf(s, Detail.Protrusion) * 0.35, 3, 20) * px;
                     UIElement shadow = Silhouette(mask, Brush(Colors.Black), new BlurEffect { Radius = Math.Max(1, offset * 0.6) });
                     shadow.Opacity = 0.3;
                     shadow.RenderTransform = new TranslateTransform(offset, offset);
@@ -318,7 +327,8 @@ namespace ReklamaMaket.Rendering
                 }
                 if (lit)
                     grid.Children.Add(Silhouette(mask, Brush(light), new BlurEffect { Radius = glow * 0.8 }));
-                AddOutline(grid, mask, lit ? light : (night ? ColorMath.Shade(s.ReturnColor, 0.25) : s.ReturnColor), Math.Max(Math.Max(letter.TrimMm, 3) * px, 0.8));
+                AddOutline(grid, mask, lit ? light : (night ? ColorMath.Shade(s.ReturnColor, 0.25) : s.ReturnColor),
+                    Math.Max(SignDetails.SizeOf(s, Detail.Trim) * px, 0.8));
             }
             else
             {
@@ -365,12 +375,12 @@ namespace ReklamaMaket.Rendering
             bool volumetric = rules.CanBe3D;
             bool lit = night && rules.LettersLit;
             Color light = s.LightColor;
-            double glow = Num.Clamp(s.LogoHeight * 0.06, 15, 150) * px;
+            double glow = SignDetails.SizeOf(s, Detail.Glow) * px;
 
             // 0. Kunduzi — fonga tushgan soya (Corel chizmasidagi bilan bir xil siljish)
             if (!night && volumetric)
             {
-                double offset = Num.Clamp((s.Depth + (letter.OnStandoffs ? 30 : 0)) * 0.3, 4, 60) * px;
+                double offset = Num.Clamp((s.Depth + (letter.OnStandoffs ? SignDetails.SizeOf(s, Detail.Standoff) : 0)) * 0.3, 4, 60) * px;
                 UIElement shadow = Silhouette(mask, Brush(Colors.Black), new BlurEffect { Radius = Math.Max(1, offset * 0.6) });
                 shadow.Opacity = 0.3;
                 shadow.RenderTransform = new TranslateTransform(offset, offset);
@@ -393,7 +403,7 @@ namespace ReklamaMaket.Rendering
             }
 
             // 2. Chet: bort qirrasi yoki yonadigan kontur (siljitilgan nusxalar)
-            double trim = volumetric ? letter.TrimMm * px : 0;
+            double trim = volumetric ? SignDetails.SizeOf(s, Detail.Trim) * px : 0;
             bool rimLit = lit && (letter.Has(LightZones.SideFull) || letter.Has(LightZones.SidePartial) || letter.Has(LightZones.Rim));
             if (rimLit || trim > 0)
             {
@@ -433,26 +443,9 @@ namespace ReklamaMaket.Rendering
             // 4. Nuqtalar va naqsh
             if (letter.Has(LightZones.Dots))
             {
-                double spacing, diameter;
-                Color dayColor;
-                if (letter.Face == FaceMaterial.Perforated)
-                {
-                    spacing = Num.Clamp(s.LogoHeight * 0.03, 8, 30) * px;
-                    diameter = spacing * 0.5;
-                    dayColor = ColorMath.Shade(s.FaceColor, 2.4);
-                }
-                else if (letter.Face == FaceMaterial.Metal)
-                {
-                    spacing = Num.Clamp(s.LogoHeight * 0.12, 40, 200) * px;
-                    diameter = spacing * 0.55;
-                    dayColor = ColorMath.Rgb(0xF3EBD8);
-                }
-                else
-                {
-                    spacing = Num.Clamp(s.LogoHeight * 0.07, 20, 100) * px;
-                    diameter = spacing * 0.35;
-                    dayColor = ColorMath.Rgb(0xD9D9D9);
-                }
+                double spacing = SignDetails.DotSpacing(s) * px;
+                double diameter = SignDetails.SizeOf(s, Detail.Dots) * px;
+                Color dayColor = SignDetails.ColorOf(s, Detail.Dots);
                 bool dotsLit = lit;
                 Color color = dotsLit ? light : (night ? ColorMath.Shade(dayColor, 0.25) : dayColor);
                 Geometry dot = new EllipseGeometry(new Point(spacing / 2, spacing / 2), diameter / 2, diameter / 2);
@@ -464,12 +457,12 @@ namespace ReklamaMaket.Rendering
 
             if (letter.Has(LightZones.Pattern))
             {
-                double spacing = Num.Clamp(s.LogoHeight * 0.08, 25, 120) * px;
-                double half = spacing * 0.35;
+                double spacing = SignDetails.FacePatternSpacing(s) * px;
+                double half = SignDetails.SizeOf(s, Detail.FacePattern) * px * 0.707;
                 double c = spacing / 2;
                 Geometry diamond = Geometry.Parse(string.Format(CultureInfo.InvariantCulture,
                     "M{0},{1} L{2},{0} {0},{3} {1},{0}Z", c, c - half, c + half, c + half));
-                Color dayColor = ColorMath.Rgb(0xE8C766);
+                Color dayColor = SignDetails.ColorOf(s, Detail.FacePattern);
                 Color color = lit ? light : (night ? ColorMath.Shade(dayColor, 0.25) : dayColor);
                 var pattern = Silhouette(mask, Tile(diamond, color, spacing), null);
                 if (lit)

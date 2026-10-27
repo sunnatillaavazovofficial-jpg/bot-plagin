@@ -13,6 +13,12 @@ namespace ReklamaMaket.Core
         /// <summary>Yonadigan fonning orqasidagi oq diffuzor (kunduzi).</summary>
         public static readonly Color Diffuser = Rgb(0xE6E3DD);
 
+        /// <summary>Po'lat (profil, bolt, kronshteyn).</summary>
+        public static readonly Color Steel = Rgb(0xA3A9AF);
+
+        /// <summary>Alyuminiy (gravirovka o'yig'i).</summary>
+        public static readonly Color Silver = Rgb(0xC9CED3);
+
         /// <summary>Kechasi yorug'lik darajasiga mos rang (0 — qorong'i, eng yuqori — nur rangi).</summary>
         public static Color LightLevel(Color behind, Color light, int level, int levels)
         {

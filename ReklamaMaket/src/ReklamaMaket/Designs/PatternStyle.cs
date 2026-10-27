@@ -53,6 +53,9 @@ namespace ReklamaMaket.Designs
         /// <summary>Teshik bo'yi / eni (romb va tirqish uchun).</summary>
         public double Aspect { get; }
 
+        /// <summary>Shu gul, boshqa qadam (kattalik) bilan.</summary>
+        public PatternStyle WithPitch(double pitch) => new PatternStyle(Name, EnglishName, Shape, pitch, Open, Aspect);
+
         public override string ToString() => Name;
     }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Windows.Media;
 using ReklamaMaket.Designs;
 
@@ -68,6 +69,15 @@ namespace ReklamaMaket.Core
         public double Margin { get; set; } = 200;
 
         public LogoAlign Align { get; set; } = LogoAlign.Center;
+
+        // ---- Detallar (kant, distansiya, ramka, gul, reyka, nur...). Bu yerda faqat foydalanuvchi
+        // o'zgartirganlari turadi; qolganlari dizayn turidan olinadi — qarang: SignDetails.
+
+        /// <summary>Detal rangi (foydalanuvchi tanlagan).</summary>
+        public Dictionary<Detail, Color> DetailColors { get; set; } = new Dictionary<Detail, Color>();
+
+        /// <summary>Detal o'lchami, mm (foydalanuvchi kiritgan).</summary>
+        public Dictionary<Detail, double> DetailSizes { get; set; } = new Dictionary<Detail, double>();
 
         // ---- Corel
         /// <summary>Corelda chizish masshtabi: 1:Scale.</summary>

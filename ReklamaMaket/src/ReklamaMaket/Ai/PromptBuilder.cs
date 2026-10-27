@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows.Media;
@@ -101,18 +102,43 @@ namespace ReklamaMaket.Ai
 
                 if (rules.CanBe3D)
                 {
-                    text.AppendLine("- Letter depth: " + Num.Format(s.Depth) + " mm" +
-                                    (letter.OnStandoffs ? ", mounted on about 30 mm spacers so the letters float off the background" : string.Empty) + ".");
+                    string mounting = string.Empty;
+                    if (letter.OnStandoffs)
+                    {
+                        double standoff = SignDetails.SizeOf(s, Detail.Standoff);
+                        mounting = standoff > 0
+                            ? ", mounted on about " + Mm(standoff) + " mm spacers so the letters float off the background"
+                            : ", mounted flush without spacers";
+                    }
+                    text.AppendLine("- Letter depth: " + Num.Format(s.Depth) + " mm" + mounting + ".");
+                    AppendLetterDetails(text, s);
                 }
             }
             text.AppendLine("- Logo size: " + Num.Format(s.LogoWidth) + " × " + Num.Format(s.LogoHeight) + " mm, " + Placement(s.Align) + " on the background.");
 
             string backgroundLine = "- Background: " + background.EnglishName + " — " + background.PromptDetails;
             if (background.HasPattern)
-                backgroundLine += "; pattern: " + s.Pattern.EnglishName + " (about " + Num.Format(s.Pattern.Pitch) + " mm pitch)";
+                backgroundLine += "; pattern: " + s.Pattern.EnglishName + " (about " + Mm(SignDetails.SizeOf(s, Detail.Pattern)) + " mm pitch)";
             backgroundLine += "; colour " + ColorMath.Describe(s.BackgroundColor);
-            if (background.FrameWidth > 0)
-                backgroundLine += "; frame " + Num.Format(background.FrameWidth) + " mm, " + ColorMath.Describe(background.FrameColor);
+            if (SignDetails.Applies(s, Detail.Frame))
+            {
+                double frame = SignDetails.SizeOf(s, Detail.Frame);
+                backgroundLine += frame > 0
+                    ? "; frame " + Mm(frame) + " mm, " + ColorMath.Describe(SignDetails.ColorOf(s, Detail.Frame))
+                    : "; frameless";
+            }
+            if (background.HasSlats)
+            {
+                backgroundLine += "; slats " + Mm(SignDetails.SizeOf(s, Detail.SlatWidth)) + " mm wide with " +
+                                  Mm(SignDetails.SizeOf(s, Detail.SlatGap)) + " mm gaps";
+            }
+            if (SignDetails.Applies(s, Detail.Bolts))
+            {
+                backgroundLine += "; " + Mm(SignDetails.SizeOf(s, Detail.Bolts)) + " mm standoff bolts, " +
+                                  ColorMath.Describe(SignDetails.ColorOf(s, Detail.Bolts));
+            }
+            if (SignDetails.Applies(s, Detail.Wall))
+                backgroundLine += "; the wall behind is " + ColorMath.Describe(SignDetails.ColorOf(s, Detail.Wall));
             if (background.Kind != BackgroundKind.Wall)
             {
                 backgroundLine += "; size " + Num.Format(System.Math.Round(layout.BackgroundWidth)) + " × " +
@@ -121,7 +147,11 @@ namespace ReklamaMaket.Ai
             text.AppendLine(backgroundLine + ".");
 
             if (s.EngravedBorder && background.CanHaveBorder)
-                text.AppendLine("- A thin engraved border line (V-groove showing bare silver aluminium) runs around the face, inset from the edges.");
+            {
+                text.AppendLine("- An engraved border line (V-groove) " + Mm(SignDetails.SizeOf(s, Detail.Border)) + " mm wide, " +
+                                ColorMath.Describe(SignDetails.ColorOf(s, Detail.Border)) + ", runs around the face " +
+                                Mm(SignDetails.SizeOf(s, Detail.BorderInset)) + " mm inside the edges.");
+            }
 
             if (background.SupportsLighting)
                 text.AppendLine("- Background lighting: " + (rules.BackgroundLit ? BackgroundLights.Prompt(s.BackgroundLight) : BackgroundLights.Prompt(BackgroundLight.None)) + ".");
@@ -158,8 +188,9 @@ namespace ReklamaMaket.Ai
                     break;
                 case CutMode.PushThrough:
                     text.AppendLine("- Push-through letters: " + Num.Format(s.Depth) + " mm acrylic, protruding about " +
-                                    Num.Format(letter.Protrusion(s.Depth)) + " mm from the face; letter face film " +
-                                    ColorMath.Describe(s.FaceColor) + ", acrylic edges " + ColorMath.Describe(s.ReturnColor) + ".");
+                                    Mm(SignDetails.SizeOf(s, Detail.Protrusion)) + " mm from the face; letter face film " +
+                                    ColorMath.Describe(s.FaceColor) + ", acrylic edges " + ColorMath.Describe(s.ReturnColor) + " about " +
+                                    Mm(SignDetails.SizeOf(s, Detail.Trim)) + " mm wide.");
                     break;
                 case CutMode.RoutedBacking:
                     text.AppendLine("- Through the cut-out the backing panel is visible in " + ColorMath.Describe(s.FaceColor) + ".");
@@ -170,6 +201,35 @@ namespace ReklamaMaket.Ai
                     break;
             }
         }
+
+        /// <summary>Harf detallari: kant, LED nuqtalar, naqsh (faqat shu dizaynda bor bo'lganlari).</summary>
+        private static void AppendLetterDetails(StringBuilder text, SignSettings s)
+        {
+            var parts = new List<string>();
+            double trim = SignDetails.SizeOf(s, Detail.Trim);
+            if (trim > 0 || s.DetailSizes.ContainsKey(Detail.Trim))
+            {
+                parts.Add(trim > 0
+                    ? "trim cap edge " + Mm(trim) + " mm around the faces in the return colour"
+                    : "no trim cap, the faces sit flush with the returns");
+            }
+            if (SignDetails.Applies(s, Detail.Dots))
+            {
+                parts.Add((s.Letter.Face == FaceMaterial.Metal ? "bulbs " : "LED points ") + Mm(SignDetails.SizeOf(s, Detail.Dots)) +
+                          " mm in diameter, about " + Mm(SignDetails.DotSpacing(s)) + " mm apart, " +
+                          ColorMath.Describe(SignDetails.ColorOf(s, Detail.Dots)) + " when switched off");
+            }
+            if (SignDetails.Applies(s, Detail.FacePattern))
+            {
+                parts.Add("laser-cut pattern elements about " + Mm(SignDetails.SizeOf(s, Detail.FacePattern)) + " mm, " +
+                          ColorMath.Describe(SignDetails.ColorOf(s, Detail.FacePattern)));
+            }
+            if (parts.Count > 0)
+                text.AppendLine("- Letter details: " + string.Join("; ", parts) + ".");
+        }
+
+        /// <summary>O'lcham so'rov uchun: 10 mm dan kichigi 0,1 aniqlikda, kattasi butun.</summary>
+        private static string Mm(double mm) => Num.Format(Math.Round(mm, mm < 10 ? 1 : 0));
 
         private static string Placement(LogoAlign align)
         {
@@ -212,7 +272,15 @@ namespace ReklamaMaket.Ai
                     : BackgroundLights.Prompt(s.BackgroundLight));
             }
 
-            return string.Join("; ", parts) + ". Light colour: " + ColorName(s.LightColor) + ".";
+            string result = string.Join("; ", parts);
+            if (s.DetailSizes.ContainsKey(Detail.Glow) && rules.LettersLit)
+                result += "; the glow spreads about " + Mm(SignDetails.SizeOf(s, Detail.Glow)) + " mm around the logo";
+            result += ". Light colour: " + ColorName(s.LightColor) + ".";
+
+            Color backgroundLight = SignDetails.ColorOf(s, Detail.BackgroundLight);
+            if (rules.BackgroundLit && s.Background.SupportsLighting && !backgroundLight.Equals(s.LightColor))
+                result += " Background light colour: " + ColorName(backgroundLight) + ".";
+            return result;
         }
 
         private static string ColorName(Color c)

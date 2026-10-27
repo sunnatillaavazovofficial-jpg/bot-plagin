@@ -78,6 +78,9 @@ namespace ReklamaMaket.Core
         /// <summary>Juda ko'p teshik bo'lsa Corel sekinlashadi — qadam kattalashtiriladi.</summary>
         public const int MaxHoles = 1600;
 
+        /// <summary>Reykalar soni chegarasi.</summary>
+        public const int MaxSlats = 400;
+
         /// <summary>Yorug'lik darajalari soni (kechki ko'rinishda).</summary>
         public const int LightLevels = 4;
 
@@ -269,13 +272,28 @@ namespace ReklamaMaket.Core
             return (int)Math.Round(value * (LightLevels - 1));
         }
 
-        /// <summary>Gorizontal/vertikal reykalar: har bir reyka to'rtburchagi (mm).</summary>
-        public static List<Rect> Slats(Rect area, bool horizontal, out double gap)
+        /// <summary>Standart reyka eni, mm (span — reykalar ketma-ket joylashadigan tomon).</summary>
+        public static double DefaultSlatWidth(double span, bool horizontal) =>
+            horizontal ? Num.Clamp(span * 0.06, 40, 120) : Num.Clamp(span * 0.035, 30, 80);
+
+        /// <summary>Standart reykalar oralig'i, mm.</summary>
+        public static double DefaultSlatGap(double slat, bool horizontal) => horizontal ? slat * 0.7 : slat * 0.45;
+
+        /// <summary>Gorizontal/vertikal reykalar: har bir reyka to'rtburchagi (mm), fon o'rtasiga tekislangan.</summary>
+        public static List<Rect> Slats(Rect area, bool horizontal, double slat, double gap)
         {
             double span = horizontal ? area.Height : area.Width;
-            double slat = horizontal ? Num.Clamp(span * 0.06, 40, 120) : Num.Clamp(span * 0.035, 30, 80);
-            gap = horizontal ? slat * 0.7 : slat * 0.45;
-            int count = Math.Max(2, (int)Math.Floor((span + gap) / (slat + gap)));
+            slat = Math.Max(slat, 1);
+            gap = Math.Max(gap, 0);
+            int count = Math.Max(1, (int)Math.Floor((span + gap) / (slat + gap)));
+            if (count > MaxSlats)
+            {
+                // Juda mayda reyka — chizma og'irlashmasin
+                double factor = (double)count / MaxSlats;
+                slat *= factor;
+                gap *= factor;
+                count = MaxSlats;
+            }
             double start = (span - (count * slat + (count - 1) * gap)) / 2;
 
             var slats = new List<Rect>();

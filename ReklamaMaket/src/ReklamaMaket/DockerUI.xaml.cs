@@ -168,6 +168,7 @@ namespace ReklamaMaket
 
         private void ApplyLetterStyle(LetterStyle style)
         {
+            ResetDetails(DetailReset.Letter);
             faceColor = style.FaceColor;
             returnColor = style.ReturnColor;
             lightColor = style.LightColor;
@@ -213,6 +214,7 @@ namespace ReklamaMaket
 
         private void ApplyBackgroundStyle(BackgroundStyle style)
         {
+            ResetDetails(DetailReset.Background, DetailReset.Pattern);
             backgroundColor = style.DefaultColor;
 
             bool previous = suppressEvents;
@@ -288,6 +290,8 @@ namespace ReklamaMaket
                 Background = background,
                 BackgroundColor = backgroundColor,
                 EngravedBorder = background.CanHaveBorder && EngravedBorderCheck.IsChecked == true,
+                DetailColors = new Dictionary<Detail, Color>(detailColors),
+                DetailSizes = new Dictionary<Detail, double>(detailSizes),
                 AutoBackgroundSize = auto,
                 BackgroundWidth = backgroundWidth,
                 BackgroundHeight = backgroundHeight,
@@ -359,6 +363,7 @@ namespace ReklamaMaket
 
             RuleResult rules = SignRules.Check(settings);
             bool night = NightRadio.IsChecked == true;
+            SyncDetails(settings);
             try
             {
                 PreviewBox.Child = PreviewBuilder.Build(settings, rules, logo, night);
@@ -507,6 +512,7 @@ namespace ReklamaMaket
                         box.Text = Num.Format(Math.Round(newUnit.FromMm(oldUnit.ToMm(value)), 3));
                 }
                 UpdateUnitTexts();
+                WriteDetailSizes();
             }
             finally
             {

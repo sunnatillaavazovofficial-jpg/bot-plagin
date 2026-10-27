@@ -10,6 +10,8 @@ yuborib, uning kunduzgi va kechki **real ko'rinishini** oladi (har kim o'z API k
 2. Logoning haqiqiy **bo'yi**ni kiriting — eni proporsiya bo'yicha o'zi hisoblanadi.
 3. **Logo dizayni** (hajmli harf yoki fonga o'yilgan logo, qalinligi, ranglari) va **fon dizayni**ni tanlang.
    Panel tepasida **Kunduzi / Kechasi** ko'rinishi darhol yangilanadi.
+   **Detallar** bo'limida kant, distansiya, LED nuqta, nur, ramka, gul, reyka va boshqa
+   detallarning rangi va o'lchamini alohida o'zgartirish mumkin.
 4. **CORELDA DIZAYN CHIZISH** — yangi sahifada quyidagilar chiziladi:
    - kunduzgi ko'rinish (fon + harflar + soya);
    - kechki ko'rinish (nima yonishi: yuz, kontrajur, yon tomon, LED nuqtalar...);
@@ -107,6 +109,32 @@ chetlari bo'ylab yonadi, logo atrofi yonadi, pastdan yonadi. Nur teshiklar (yoki
 chiqadi; kechki ko'rinishda yorug'lik darajasi bo'yicha chiziladi. Fon qalinligi 4 sm dan kam bo'lsa —
 yoritib bo'lmaydi (ogohlantirish beriladi).
 
+## Detallar: rang va o'lcham
+
+Asosiy ranglar va o'lchamlar o'z bo'limlarida o'zgartiriladi: logo (bo'yi, eni, qalinligi, yuz / bort / nur rangi)
+va fon (rangi, eni, bo'yi, chetdan joy, qalinligi). **Detallar** bo'limida esa tanlangan dizaynda bor bo'lgan
+qismlar chiqadi. Maydon bo'sh qolsa, dizaynning o'z qiymati olinadi (kulrang "avto: ..." yozuvi).
+**↺** tugmasi asl qiymatga qaytaradi.
+
+| Detal | Rang | O'lcham | Qaysi dizaynda |
+|---|---|---|---|
+| Kant (bort qirrasi) | — (bort rangi) | eni, 0 — kantsiz | hajmli harflar, push-through qirrasi |
+| Distansiya | — | harf va fon orasidagi masofa | distansiyadagi harflar (kontrajur, akril) |
+| Harf chiqib turishi | — | mm (akril qalinligidan oshmaydi) | push-through |
+| LED nuqtalar / lampochkalar / perforatsiya | kunduzgi rangi | diametri (oraliq shunga mos) | ochiq LED, lampochkali, perforatsiyali |
+| Yuzdagi naqsh | kunduzgi rangi | element kattaligi | naqshli lazer kesma |
+| Nur tarqalishi | — | mm | yonadigan harflar |
+| Fon nuri rangi | ✓ | — | gulli list, setka, reykalar |
+| Ramka / laytboks profili | ✓ | eni, 0 — ramkasiz | laytboks, gulli list, setkalar |
+| Gul o'lchami | — | qadami (markazdan markazga) | gulli list, setkalar |
+| Reyka eni va oralig'i | — | ✓ | reykali fonlar |
+| O'yilgan ramka chizig'i | ✓ | eni va chetdan masofasi | alyukobond fonlar, belgilansa |
+| Devor rangi (orqada) | ✓ | — | reykalar oralig'i, gul teshiklari |
+| Distansiya boltlari | ✓ | diametri | akril plita |
+
+Harf yoki fon turi almashtirilganda shu turga xos detallar (kant, ramka, gul, reyka...) yangi turning o'z
+qiymatiga qaytadi. Barcha detallar Corel chizmasida, paneldagi ko'rinishda va ChatGPT so'rovida bir xil ishlatiladi.
+
 ## ChatGPT'ni ulash
 
 1. [platform.openai.com/api-keys](https://platform.openai.com/api-keys) sahifasida API kalit yarating
@@ -153,7 +181,8 @@ ReklamaMaket/
     ├── Designs/LetterStyle.cs      logo dizaynlari ro'yxati (hajmli harflar + o'yilgan logo)
     ├── Designs/BackgroundStyle.cs  fon dizaynlari ro'yxati
     ├── Designs/PatternStyle.cs     gullar (perforatsiya, setka) ro'yxati
-    ├── Core/                       sozlamalar, qoidalar (SignRules), logo olish/eksport
+    ├── DockerUI.Details.cs         "Detallar" bo'limi (rang va o'lcham)
+    ├── Core/                       sozlamalar, qoidalar (SignRules), detallar (SignDetails), logo olish/eksport
     ├── Rendering/                  Corelda chizish va paneldagi ko'rinish
     └── Ai/                         ChatGPT (OpenAI Images API) va so'rov matni
 ```
