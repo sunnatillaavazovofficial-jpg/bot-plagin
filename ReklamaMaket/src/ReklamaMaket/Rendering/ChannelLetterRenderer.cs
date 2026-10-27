@@ -39,10 +39,14 @@ namespace ReklamaMaket.Rendering
         private static readonly WpfColor Steel = Rgb(0xA3A9AF);
         private static readonly WpfColor ClearAcrylic = Rgb(0xDDE8EE);
 
+        private static readonly WpfColor WallBehind = ColorMath.WallBehind;
+        private static readonly WpfColor Diffuser = ColorMath.Diffuser;
+
         private readonly corel.Application app;
         private readonly List<corel.Shape> everything = new List<corel.Shape>();
         private readonly List<corel.Shape> temporaries = new List<corel.Shape>();
         private corel.ShapeRange finals;
+        private corel.Document doc;
         private corel.Layer layer;
 
         private SignSettings s;
@@ -83,6 +87,7 @@ namespace ReklamaMaket.Rendering
             if (logo == null)
                 throw new UserException("Avval logoni tanlang.");
 
+            this.doc = doc;
             s = settings;
             rules = SignRules.Check(settings);
             lay = LogoLayout.Compute(settings);
@@ -377,7 +382,167 @@ namespace ReklamaMaket.Rendering
                     }
                     break;
                 }
+
+                case BackgroundKind.PatternSheet:
+                case BackgroundKind.FramedMesh:
+                case BackgroundKind.WoodFrameMesh:
+                    DrawPatternBackground(items, night, vx, vy);
+                    break;
+
+                case BackgroundKind.HorizontalSlats:
+                case BackgroundKind.VerticalSlats:
+                    DrawSlats(items, night, vx, vy);
+                    break;
             }
+        }
+
+        private Rect BackgroundRect => new Rect(0, 0, lay.BackgroundWidth, lay.BackgroundHeight);
+
+        /// <summary>Gulli list / setka: ramka, list va teshiklar (kechasi — yorug'lik darajasi bo'yicha).</summary>
+        private void DrawPatternBackground(List<corel.Shape> items, bool night, double vx, double vy)
+        {
+            BackgroundStyle background = s.Background;
+            bool lit = night && rules.BackgroundLit;
+            bool lightBox = s.BackgroundLight != BackgroundLight.None;
+            double frameWidth = background.FrameWidth;
+            Rect inner = new Rect(frameWidth, frameWidth,
+                Math.Max(lay.BackgroundWidth - 2 * frameWidth, 1), Math.Max(lay.BackgroundHeight - 2 * frameWidth, 1));
+
+            // Ramka
+            if (frameWidth > 0)
+            {
+                corel.Shape frame = LocalBox(vx, vy, BackgroundRect, background.FrameColor);
+                if (night)
+                    Fill(frame, Shade(background.FrameColor, 0.3));
+                else
+                    Metallic(frame, background.FrameColor);
+                items.Add(frame);
+            }
+
+            // List (setka simlari)
+            WpfColor sheet = night ? Shade(s.BackgroundColor, lit ? 0.45 : 0.22) : s.BackgroundColor;
+            items.Add(LocalBox(vx, vy, inner, sheet));
+
+            // Teshiklar: orqada yorug'lik qutisi (diffuzor) yoki devor ko'rinadi
+            Rect holeArea = inner;
+            if (background.Kind == BackgroundKind.PatternSheet)
+            {
+                double edge = Num.Clamp(Math.Min(inner.Width, inner.Height) * 0.03, 15, 40);
+                holeArea = new Rect(inner.X + edge, inner.Y + edge, Math.Max(inner.Width - 2 * edge, 1), Math.Max(inner.Height - 2 * edge, 1));
+            }
+            List<Hole> holes = PatternGeometry.Holes(s.Pattern, holeArea, out _);
+            WpfColor behind = lightBox ? Diffuser : Shade(WallBehind, 0.75);
+            if (!lit)
+            {
+                items.Add(Polygons(holes.Select(h => h.Points), vx, vy, night ? Shade(behind, 0.15) : behind));
+            }
+            else
+            {
+                for (int level = 0; level < PatternGeometry.LightLevels; level++)
+                {
+                    int current = level;
+                    var group = holes.Where(h => PatternGeometry.Level(s.BackgroundLight, h.Center, BackgroundRect, lay.Logo) == current)
+                                     .Select(h => h.Points);
+                    items.Add(Polygons(group, vx, vy, LightLevelColor(behind, current)));
+                }
+            }
+
+            // Ramkadagi setka: oraliq ustunlar (rasmdagidek)
+            if (background.Kind == BackgroundKind.FramedMesh && inner.Width > 1500)
+            {
+                int bars = (int)Math.Round(inner.Width / 1000) - 1;
+                for (int i = 1; i <= bars; i++)
+                {
+                    double x = inner.X + inner.Width * i / (bars + 1);
+                    corel.Shape bar = LocalBox(vx, vy, new Rect(x - frameWidth * 0.4, inner.Y, frameWidth * 0.8, inner.Height), background.FrameColor);
+                    if (night)
+                        Fill(bar, Shade(background.FrameColor, 0.3));
+                    items.Add(bar);
+                }
+            }
+        }
+
+        /// <summary>Gorizontal reykalar (kronshteynda) yoki vertikal reykali panel.</summary>
+        private void DrawSlats(List<corel.Shape> items, bool night, double vx, double vy)
+        {
+            bool horizontal = s.Background.Kind == BackgroundKind.HorizontalSlats;
+            bool lit = night && rules.BackgroundLit;
+            WpfColor slatColor = night ? Shade(s.BackgroundColor, 0.25) : s.BackgroundColor;
+            List<Rect> slats = PatternGeometry.Slats(BackgroundRect, horizontal, out _);
+
+            if (horizontal)
+            {
+                // Oraliqlardan devor va vertikal kronshteynlar ko'rinadi
+                items.Add(LocalBox(vx, vy, BackgroundRect, night ? Shade(WallBehind, 0.18) : WallBehind));
+                int posts = Math.Max(2, (int)Math.Round(lay.BackgroundWidth / 1200) + 1);
+                for (int i = 0; i < posts; i++)
+                {
+                    double x = lay.BackgroundWidth * (i + 0.5) / posts;
+                    items.Add(LocalBox(vx, vy, new Rect(x - 20, 0, 40, lay.BackgroundHeight), Shade(slatColor, 0.75)));
+                }
+            }
+            else
+            {
+                // Qovurg'alar orasidagi chuqurchalar
+                items.Add(LocalBox(vx, vy, BackgroundRect, night ? Shade(s.BackgroundColor, 0.12) : Shade(s.BackgroundColor, 0.55)));
+            }
+
+            if (lit)
+            {
+                List<Rect> gaps = PatternGeometry.SlatGaps(slats, horizontal, 16);
+                for (int level = 1; level < PatternGeometry.LightLevels; level++)
+                {
+                    int current = level;
+                    var group = gaps.Where(g => PatternGeometry.Level(s.BackgroundLight, new Point(g.X + g.Width / 2, g.Y + g.Height / 2), BackgroundRect, lay.Logo) == current)
+                                    .Select(RectPoints);
+                    items.Add(Polygons(group, vx, vy, LightLevelColor(WallBehind, current)));
+                }
+            }
+
+            foreach (Rect slat in slats)
+            {
+                corel.Shape shape = LocalBox(vx, vy, slat, slatColor);
+                if (!night && horizontal)
+                    Metallic(shape, slatColor);
+                items.Add(shape);
+            }
+        }
+
+        private static Point[] RectPoints(Rect r) => new[]
+        {
+            new Point(r.Left, r.Top), new Point(r.Right, r.Top), new Point(r.Right, r.Bottom), new Point(r.Left, r.Bottom)
+        };
+
+        /// <summary>Kechasi yorug'lik darajasiga mos rang (0 — qorong'i, eng yuqori — nur rangi).</summary>
+        private WpfColor LightLevelColor(WpfColor behind, int level) =>
+            ColorMath.LightLevel(behind, s.LightColor, level, PatternGeometry.LightLevels);
+
+        /// <summary>Fon ichidagi to'rtburchak (mm, chap-yuqoridan, Y pastga) — sahifaga.</summary>
+        private corel.Shape LocalBox(double vx, double vy, Rect r, WpfColor color)
+        {
+            return Box(vx + r.X * k, vy + (lay.BackgroundHeight - r.Y - r.Height) * k, r.Width * k, r.Height * k, color);
+        }
+
+        /// <summary>Ko'p ko'pburchakni bitta egri chiziq obyekti qilib chizadi (minglab teshik uchun tez).</summary>
+        private corel.Shape Polygons(IEnumerable<Point[]> polygons, double vx, double vy, WpfColor color)
+        {
+            corel.Curve curve = app.CreateCurve(doc);
+            int count = 0;
+            foreach (Point[] polygon in polygons)
+            {
+                corel.SubPath path = curve.CreateSubPath(vx + polygon[0].X * k, vy + (lay.BackgroundHeight - polygon[0].Y) * k);
+                for (int i = 1; i < polygon.Length; i++)
+                    path.AppendLineSegment(vx + polygon[i].X * k, vy + (lay.BackgroundHeight - polygon[i].Y) * k);
+                path.Closed = true;
+                count++;
+            }
+            if (count == 0)
+                return null;
+
+            corel.Shape shape = Track(layer.CreateCurve(curve));
+            Fill(shape, color);
+            shape.Outline.SetNoOutline();
+            return shape;
         }
 
         private void DrawLetters(List<corel.Shape> items, bool night, double dx, double dy)
@@ -513,6 +678,16 @@ namespace ReklamaMaket.Rendering
                     return "Fon: laytboks " + Num.Format(s.BackgroundDepth) + " mm" + (rules.BackgroundLit ? " (yonadi)" : "");
                 case BackgroundKind.AcrylicPlate:
                     return "Fon: akril plita " + Num.Format(s.BackgroundDepth) + " mm";
+                case BackgroundKind.PatternSheet:
+                    return "Fon: gulli temir list" + (rules.BackgroundLit ? ", orqasida LED" : string.Empty);
+                case BackgroundKind.FramedMesh:
+                    return "Fon: ramkadagi setka" + (rules.BackgroundLit ? ", orqasida LED" : string.Empty);
+                case BackgroundKind.WoodFrameMesh:
+                    return "Fon: yog'och ramka + setka" + (rules.BackgroundLit ? ", LED" : string.Empty);
+                case BackgroundKind.HorizontalSlats:
+                    return "Fon: gorizontal reykalar, kronshteyn";
+                case BackgroundKind.VerticalSlats:
+                    return "Fon: vertikal reykali panel";
                 default:
                     return null;
             }
@@ -594,6 +769,58 @@ namespace ReklamaMaket.Rendering
                     items.Add(plate);
                     anchors.Add(new Point(x + 0.65 * u, sy + height - 0.8 * u));
                     x += 0.8 * u;
+                    break;
+
+                case BackgroundKind.PatternSheet:
+                case BackgroundKind.FramedMesh:
+                case BackgroundKind.WoodFrameMesh:
+                {
+                    bool box = s.BackgroundLight != BackgroundLight.None;
+                    double boxDepth = box ? 1.1 * u : 0.3 * u;
+                    if (box)
+                    {
+                        items.Add(Outlined(Box(x, sy + 0.3 * u, boxDepth, height - 0.6 * u, Rgb(0xF4F4F4)), Ink));
+                        if (rules.BackgroundLit)
+                        {
+                            for (int i = 1; i <= 3; i++)
+                                items.Add(Box(x + 0.12 * u, sy + height * i / 4 - 0.15 * u, 0.22 * u, 0.3 * u, LedColor));
+                        }
+                    }
+                    if (s.Background.FrameWidth > 0)
+                    {
+                        foreach (double fy in new[] { sy + 0.3 * u, sy + height - 0.65 * u })
+                            items.Add(Outlined(Box(x + boxDepth - 0.35 * u, fy, 0.35 * u, 0.35 * u, s.Background.FrameColor), Ink));
+                    }
+                    double sheetX = x + boxDepth;
+                    for (double py = sy + 0.4 * u; py < sy + height - 0.6 * u; py += 0.35 * u)
+                        items.Add(Box(sheetX, py, 0.1 * u, 0.2 * u, Shade(s.BackgroundColor, 0.8)));
+                    anchors.Add(new Point(sheetX + 0.05 * u, sy + height - 0.8 * u));
+                    x = sheetX + 0.1 * u;
+                    break;
+                }
+
+                case BackgroundKind.HorizontalSlats:
+                {
+                    foreach (double ay in new[] { sy + 0.8 * u, sy + height - 0.9 * u })
+                        items.Add(Outlined(Box(x, ay, 0.3 * u, 0.1 * u, Steel), Ink));
+                    items.Add(Outlined(Box(x + 0.3 * u, sy + 0.3 * u, 0.15 * u, height - 0.6 * u, Steel), Ink));
+                    double slat = 0.45 * u;
+                    for (double py = sy + 0.4 * u; py + slat < sy + height - 0.3 * u; py += slat * 1.7)
+                        items.Add(Outlined(Box(x + 0.45 * u, py, slat, slat, s.BackgroundColor), Ink));
+                    if (rules.BackgroundLit)
+                    {
+                        for (int i = 1; i <= 3; i++)
+                            items.Add(Box(x + 0.32 * u, sy + height * i / 4, 0.12 * u, 0.25 * u, LedColor));
+                    }
+                    anchors.Add(new Point(x + 0.45 * u + slat / 2, sy + height - 0.8 * u));
+                    x += 0.45 * u + slat;
+                    break;
+                }
+
+                case BackgroundKind.VerticalSlats:
+                    items.Add(Outlined(Box(x, sy + 0.4 * u, 0.4 * u, height - 0.8 * u, s.BackgroundColor), Ink));
+                    anchors.Add(new Point(x + 0.2 * u, sy + height - 0.8 * u));
+                    x += 0.4 * u;
                     break;
             }
 
@@ -767,10 +994,20 @@ namespace ReklamaMaket.Rendering
             {
                 s.Letter.Name + " / " + s.Letter.EnglishName,
                 string.Format("Fon: {0} · Logo {1} × {2} mm · qalinligi {3} mm · M 1:{4}",
-                    s.Background.Name, Num.Format(s.LogoWidth), Num.Format(s.LogoHeight), Num.Format(s.Depth), s.Scale)
+                    BackgroundTitle(), Num.Format(s.LogoWidth), Num.Format(s.LogoHeight), Num.Format(s.Depth), s.Scale)
             };
             lines.AddRange(rules.Warnings.Select(w => "! " + w));
             return lines;
+        }
+
+        private string BackgroundTitle()
+        {
+            string title = s.Background.Name;
+            if (s.Background.HasPattern)
+                title += " (" + s.Pattern.Name + ")";
+            if (s.Background.SupportsLighting && s.BackgroundLight != BackgroundLight.None)
+                title += ", " + BackgroundLights.Name(s.BackgroundLight).ToLowerInvariant();
+            return title;
         }
 
         private List<corel.Shape> DrawCaptions(Frame frame)

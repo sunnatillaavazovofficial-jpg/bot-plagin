@@ -184,6 +184,32 @@
                         </ComboBox>
                         <TextBlock x:Name="BackgroundDescription" Style="{StaticResource Hint}" Margin="0,4,0,8"/>
 
+                        <StackPanel x:Name="PatternPanel" Visibility="Collapsed" Margin="0,0,0,6">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Gul (naqsh)"/>
+                            <ComboBox x:Name="PatternCombo" MaxDropDownHeight="420" SelectionChanged="Setting_Changed">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="0,1">
+                                            <Border Width="48" Height="32" BorderBrush="#DDE1E7" BorderThickness="1" ClipToBounds="True">
+                                                <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                                            </Border>
+                                            <StackPanel Margin="6,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding EnglishName}" FontSize="10.5" Foreground="#69717C"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel x:Name="LightingPanel" Visibility="Collapsed" Margin="0,0,0,6">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Fon yoritilishi (qaysi joyi yonadi)"/>
+                            <ComboBox x:Name="BackgroundLightCombo" DisplayMemberPath="Name" SelectionChanged="Setting_Changed"/>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0"
+                                       Text="Nur rangi — harf dizaynidagi «Nur» rangi. Yonishi uchun fon qalinligi kamida 4 sm."/>
+                        </StackPanel>
+
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="44"/>
@@ -287,8 +313,8 @@
                         <TextBlock x:Name="KeyStatusText" Style="{StaticResource Hint}" Margin="0,2,0,6"/>
 
                         <TextBlock Style="{StaticResource FieldLabel}" Text="Dizayn manbai"/>
-                        <RadioButton x:Name="SourceLastRadio" Content="Oxirgi chizilgan dizayn (avtomatik)" IsChecked="True" Margin="0,3"/>
-                        <RadioButton x:Name="SourceSelectionRadio" Content="Corelda tanlangan obyekt" Margin="0,3"/>
+                        <RadioButton x:Name="SourceLastRadio" Content="Oxirgi chizilgan dizayn (avtomatik)" IsChecked="True" Margin="0,3" Checked="Setting_Changed"/>
+                        <RadioButton x:Name="SourceSelectionRadio" Content="Corelda tanlangan obyekt" Margin="0,3" Checked="Setting_Changed"/>
 
                         <TextBlock Style="{StaticResource FieldLabel}" Text="Joy rasmi (bino fasadi, ixtiyoriy)" Margin="0,6,0,0"/>
                         <Grid>
@@ -314,10 +340,14 @@
                             <Button Grid.Column="1" Style="{StaticResource SecondaryButton}" Padding="6,1" Margin="0"
                                     Content="Standart" FontSize="11" Click="ResetPromptButton_Click"/>
                         </Grid>
-                        <TextBox x:Name="PromptBox" Height="88" TextWrapping="Wrap" AcceptsReturn="True"
+                        <TextBox x:Name="PromptBox" Height="88" TextWrapping="Wrap" AcceptsReturn="True" TextChanged="Setting_Changed"
                                  VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Left" VerticalContentAlignment="Top"/>
                         <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0"
-                                   Text="Dizayn turi, o'lcham va kunduzi/kechasi so'rovga avtomatik qo'shiladi."/>
+                                   Text="Plagin dizayni tavsifi (harf, fon, gul, ranglar, yoritilish, o'lcham) so'rovga avtomatik qo'shiladi."/>
+                        <Expander Header="Yuboriladigan to'liq so'rovni ko'rish" Margin="0,4,0,0" Foreground="{StaticResource TextBrush}">
+                            <TextBox x:Name="FullPromptBox" IsReadOnly="True" TextWrapping="Wrap" Height="180" FontSize="11"
+                                     VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Left" VerticalContentAlignment="Top"/>
+                        </Expander>
 
                         <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                             <CheckBox x:Name="AiDayCheck" Content="Kunduzi" IsChecked="True" Margin="0,0,14,0"/>

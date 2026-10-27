@@ -46,6 +46,12 @@ namespace ReklamaMaket.Core
 
         public Color BackgroundColor { get; set; } = Colors.White;
 
+        /// <summary>Gul (perforatsiya / setka) — gulli fonlar uchun.</summary>
+        public PatternStyle Pattern { get; set; } = PatternStyles.All[0];
+
+        /// <summary>Fonning qaysi joyi yonadi (gulli va reykali fonlar uchun).</summary>
+        public BackgroundLight BackgroundLight { get; set; } = BackgroundLight.None;
+
         /// <summary>Fon o'lchami = logo + chetdan joy.</summary>
         public bool AutoBackgroundSize { get; set; } = true;
 

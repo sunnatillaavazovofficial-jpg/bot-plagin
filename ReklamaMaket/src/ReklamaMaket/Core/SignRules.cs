@@ -55,13 +55,15 @@ namespace ReklamaMaket.Core
                     Num.Format(s.Depth / 10)));
             }
 
-            if (s.Background.Kind == BackgroundKind.Lightbox)
+            bool backgroundWantsLight = s.Background.Kind == BackgroundKind.Lightbox ||
+                                        (s.Background.SupportsLighting && s.BackgroundLight != BackgroundLight.None);
+            if (backgroundWantsLight)
             {
                 result.BackgroundLit = s.BackgroundDepth >= MinLitDepthMm;
                 if (!result.BackgroundLit)
                 {
                     result.Warnings.Add(string.Format(
-                        "Laytboks qalinligi {0} sm — 4 sm dan kam, uni yoritib bo'lmaydi.",
+                        "Fon qalinligi {0} sm — 4 sm dan kam, fonni yoritib bo'lmaydi (orqasiga LED sig'maydi).",
                         Num.Format(s.BackgroundDepth / 10)));
                 }
             }

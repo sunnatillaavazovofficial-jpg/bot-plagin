@@ -28,7 +28,7 @@ yuborib, uning kunduzgi va kechki **real ko'rinishini** oladi (har kim o'z API k
 |---|---|
 | Logo bo'yi **20 sm dan past** | Hajmli (3D) va yoritilgan qilib bo'lmaydi — faqat yassi harf |
 | Qalinligi **4 sm dan kam** | Yoritib bo'lmaydi (ichiga LED sig'maydi) |
-| Laytboks fon qalinligi 4 sm dan kam | Fon yoritilmaydi |
+| Yonadigan fon (laytboks, gulli list, setka, reyka) qalinligi 4 sm dan kam | Fon yoritilmaydi |
 
 Ogohlantirish panelda sariq qutida ko'rinadi, chizishdan oldin yana so'raladi. Davom etilsa,
 dizayn shu cheklov bilan (yassi va/yoki yoritilmagan holda) chiziladi va ChatGPT so'roviga ham
@@ -56,8 +56,29 @@ shunday yoziladi.
 | Akril harf, yoritilmaydi | Non-illuminated acrylic letters on standoffs | — |
 | Metall harf, yoritilmaydi | Non-illuminated metal letters | — |
 
-**Fon dizaynlari:** Fonsiz (to'g'ridan-to'g'ri devorga), Kompozit panel (ACP), Kasseta (bortli panel),
-Laytboks fon (yoritiladigan), Akril plita (distansiyada).
+## Fon dizaynlari (10)
+
+| Nomi | Izoh |
+|---|---|
+| Fonsiz (to'g'ridan-to'g'ri devorga) | harflar devorda |
+| Kompozit panel (ACP) | tekis panel |
+| Kasseta (bortli panel) | chetlari bukilgan panel |
+| Laytboks fon (yoritiladigan) | butun yuzi yonadi |
+| Akril plita (distansiyada) | shaffof plita, boltlarda |
+| Gulli temir list (perforatsiya) | 30 xil gul, orqasiga LED qo'yish mumkin |
+| Ramkadagi setka (temir ramka) | profil quvur ramka + setka, oraliq ustunlar |
+| Yog'och ramkali setka (orqadan yonadi) | yog'och ramka, setka, chetlari bo'ylab nur |
+| Gorizontal temir reykalar (lamel) | kronshteyndagi reykalar, oralig'idan devor ko'rinadi |
+| Vertikal reykali panel | qovurg'ali fasad qoplamasi |
+
+**Gullar (30 ta)** — gulli list va setkalar uchun: olti burchakli setka (5 xil qalinlik), dumaloq teshik (5),
+xochsimon teshik (4), kvadrat teshik va kvadrat setka (3), uzunchoq tirqish (4), romb setka / prosechka (9).
+Panelda har bir gul kichik rasmi bilan tanlanadi.
+
+**Fon yoritilishi (qaysi joyi yonadi)** — gulli, setkali va reykali fonlar uchun: yonmaydi, butunlay yonadi,
+chetlari bo'ylab yonadi, logo atrofi yonadi, pastdan yonadi. Nur teshiklar (yoki reykalar oralig'i) orqali
+chiqadi; kechki ko'rinishda yorug'lik darajasi bo'yicha chiziladi. Fon qalinligi 4 sm dan kam bo'lsa —
+yoritib bo'lmaydi (ogohlantirish beriladi).
 
 ## ChatGPT'ni ulash
 
@@ -68,6 +89,12 @@ Laytboks fon (yoritiladigan), Akril plita (distansiyada).
    ([Organization verification](https://platform.openai.com/settings/organization/general)) ham so'raladi.
 3. Kalitni panelga kiritib, **Saqlash** → **Tekshirish**. Kalit faqat shu kompyuterda, Windows foydalanuvchingiz
    uchun shifrlangan holda saqlanadi (`%APPDATA%\ReklamaMaket\settings.json`).
+
+ChatGPT'ga dizayn rasmi bilan birga **plagin dizayni tavsifi** ham yuboriladi: rasm qanday o'qilishi
+(plagin chizgan texnik old ko'rinish, haqiqiy rang va proporsiya), harf turi va materiallari, ranglar
+(nomi va hex kodi), qalinlik, logo o'lchami va joylashuvi, fon turi, gul, ramka, fon o'lchami,
+qaysi joyi yonishi va qat'iy talablar (logoni o'zgartirmaslik, ortiqcha narsa qo'shmaslik).
+Panelda **"Yuboriladigan to'liq so'rovni ko'rish"** bo'limida matnning o'zini ko'rish mumkin.
 
 Standart model — `gpt-image-2`; ro'yxatda `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`,
 `chatgpt-image-latest` ham bor, yangi model nomini qo'lda yozish mumkin. **So'rov (prompt)** maydonini
@@ -98,6 +125,7 @@ ReklamaMaket/
     ├── Styles/Theme.xaml           panel ranglari va uslublari
     ├── Designs/LetterStyle.cs      harf dizaynlari ro'yxati
     ├── Designs/BackgroundStyle.cs  fon dizaynlari ro'yxati
+    ├── Designs/PatternStyle.cs     gullar (perforatsiya, setka) ro'yxati
     ├── Core/                       sozlamalar, qoidalar (SignRules), logo olish/eksport
     ├── Rendering/                  Corelda chizish va paneldagi ko'rinish
     └── Ai/                         ChatGPT (OpenAI Images API) va so'rov matni

@@ -114,8 +114,166 @@ namespace ReklamaMaket.Rendering
                     }
                     break;
                 }
+
+                case BackgroundKind.PatternSheet:
+                case BackgroundKind.FramedMesh:
+                case BackgroundKind.WoodFrameMesh:
+                    canvas.Children.Add(PatternBackground(s, rules, night, px));
+                    break;
+
+                case BackgroundKind.HorizontalSlats:
+                case BackgroundKind.VerticalSlats:
+                    canvas.Children.Add(SlatBackground(s, rules, night, px));
+                    break;
             }
             return canvas;
+        }
+
+        /// <summary>Gulli list / setka (Corel chizmasi bilan bir xil hisob).</summary>
+        private static UIElement PatternBackground(SignSettings s, RuleResult rules, bool night, double px)
+        {
+            SignLayout lay = LogoLayout.Compute(s);
+            BackgroundStyle background = s.Background;
+            var canvas = new Canvas { Width = lay.BackgroundWidth * px, Height = lay.BackgroundHeight * px };
+            var full = new Rect(0, 0, lay.BackgroundWidth, lay.BackgroundHeight);
+            bool lit = night && rules.BackgroundLit;
+            double frameWidth = background.FrameWidth;
+            var inner = new Rect(frameWidth, frameWidth, Math.Max(full.Width - 2 * frameWidth, 1), Math.Max(full.Height - 2 * frameWidth, 1));
+
+            if (frameWidth > 0)
+                AddRect(canvas, full, px, night ? Brush(ColorMath.Shade(background.FrameColor, 0.3)) : Metal(background.FrameColor));
+            Color sheet = night ? ColorMath.Shade(s.BackgroundColor, lit ? 0.45 : 0.22) : s.BackgroundColor;
+            AddRect(canvas, inner, px, Brush(sheet));
+
+            Rect holeArea = inner;
+            if (background.Kind == BackgroundKind.PatternSheet)
+            {
+                double edge = Num.Clamp(Math.Min(inner.Width, inner.Height) * 0.03, 15, 40);
+                holeArea = new Rect(inner.X + edge, inner.Y + edge, Math.Max(inner.Width - 2 * edge, 1), Math.Max(inner.Height - 2 * edge, 1));
+            }
+            var holes = PatternGeometry.Holes(s.Pattern, holeArea, out _);
+            Color behind = s.BackgroundLight != BackgroundLight.None ? ColorMath.Diffuser : ColorMath.Shade(ColorMath.WallBehind, 0.75);
+            if (!lit)
+            {
+                canvas.Children.Add(Polygons(holes.ConvertAll(h => h.Points), px, Brush(night ? ColorMath.Shade(behind, 0.15) : behind)));
+            }
+            else
+            {
+                for (int level = 0; level < PatternGeometry.LightLevels; level++)
+                {
+                    var group = holes.FindAll(h => PatternGeometry.Level(s.BackgroundLight, h.Center, full, lay.Logo) == level).ConvertAll(h => h.Points);
+                    Color color = ColorMath.LightLevel(behind, s.LightColor, level, PatternGeometry.LightLevels);
+                    var path = Polygons(group, px, Brush(color));
+                    if (level == PatternGeometry.LightLevels - 1)
+                        path.Effect = new DropShadowEffect { ShadowDepth = 0, BlurRadius = 10, Color = s.LightColor, Opacity = 0.9 };
+                    canvas.Children.Add(path);
+                }
+            }
+
+            if (background.Kind == BackgroundKind.FramedMesh && inner.Width > 1500)
+            {
+                int bars = (int)Math.Round(inner.Width / 1000) - 1;
+                for (int i = 1; i <= bars; i++)
+                {
+                    double x = inner.X + inner.Width * i / (bars + 1);
+                    AddRect(canvas, new Rect(x - frameWidth * 0.4, inner.Y, frameWidth * 0.8, inner.Height), px,
+                        Brush(night ? ColorMath.Shade(background.FrameColor, 0.3) : background.FrameColor));
+                }
+            }
+            return canvas;
+        }
+
+        /// <summary>Gorizontal reykalar (kronshteynda) yoki vertikal reykali panel.</summary>
+        private static UIElement SlatBackground(SignSettings s, RuleResult rules, bool night, double px)
+        {
+            SignLayout lay = LogoLayout.Compute(s);
+            var canvas = new Canvas { Width = lay.BackgroundWidth * px, Height = lay.BackgroundHeight * px };
+            var full = new Rect(0, 0, lay.BackgroundWidth, lay.BackgroundHeight);
+            bool horizontal = s.Background.Kind == BackgroundKind.HorizontalSlats;
+            bool lit = night && rules.BackgroundLit;
+            Color slatColor = night ? ColorMath.Shade(s.BackgroundColor, 0.25) : s.BackgroundColor;
+            var slats = PatternGeometry.Slats(full, horizontal, out _);
+
+            if (horizontal)
+            {
+                AddRect(canvas, full, px, Brush(night ? ColorMath.Shade(ColorMath.WallBehind, 0.18) : ColorMath.WallBehind));
+                int posts = Math.Max(2, (int)Math.Round(full.Width / 1200) + 1);
+                for (int i = 0; i < posts; i++)
+                {
+                    double x = full.Width * (i + 0.5) / posts;
+                    AddRect(canvas, new Rect(x - 20, 0, 40, full.Height), px, Brush(ColorMath.Shade(slatColor, 0.75)));
+                }
+            }
+            else
+            {
+                AddRect(canvas, full, px, Brush(night ? ColorMath.Shade(s.BackgroundColor, 0.12) : ColorMath.Shade(s.BackgroundColor, 0.55)));
+            }
+
+            if (lit)
+            {
+                var gaps = PatternGeometry.SlatGaps(slats, horizontal, 16);
+                for (int level = 1; level < PatternGeometry.LightLevels; level++)
+                {
+                    var group = gaps.FindAll(g => PatternGeometry.Level(s.BackgroundLight, new Point(g.X + g.Width / 2, g.Y + g.Height / 2), full, lay.Logo) == level)
+                                    .ConvertAll(g => new[] { g.TopLeft, g.TopRight, g.BottomRight, g.BottomLeft });
+                    var path = Polygons(group, px, Brush(ColorMath.LightLevel(ColorMath.WallBehind, s.LightColor, level, PatternGeometry.LightLevels)));
+                    path.Effect = new BlurEffect { Radius = 6 };
+                    canvas.Children.Add(path);
+                }
+            }
+
+            foreach (Rect slat in slats)
+                AddRect(canvas, slat, px, !night && horizontal ? Metal(slatColor) : Brush(slatColor));
+            return canvas;
+        }
+
+        private static void AddRect(Canvas canvas, Rect r, double px, Brush fill)
+        {
+            var rectangle = new Rectangle { Width = Math.Max(r.Width * px, 0.1), Height = Math.Max(r.Height * px, 0.1), Fill = fill };
+            Canvas.SetLeft(rectangle, r.X * px);
+            Canvas.SetTop(rectangle, r.Y * px);
+            canvas.Children.Add(rectangle);
+        }
+
+        private static Path Polygons(System.Collections.Generic.List<Point[]> polygons, double px, Brush fill)
+        {
+            var geometry = new StreamGeometry();
+            using (StreamGeometryContext context = geometry.Open())
+            {
+                foreach (Point[] polygon in polygons)
+                {
+                    context.BeginFigure(new Point(polygon[0].X * px, polygon[0].Y * px), true, true);
+                    for (int i = 1; i < polygon.Length; i++)
+                        context.LineTo(new Point(polygon[i].X * px, polygon[i].Y * px), false, false);
+                }
+            }
+            geometry.Freeze();
+            return new Path { Data = geometry, Fill = fill, IsHitTestVisible = false };
+        }
+
+        /// <summary>Gul tanlash ro'yxati uchun kichik rasm.</summary>
+        public static ImageSource PatternThumbnail(PatternStyle pattern)
+        {
+            var area = new Rect(0, 0, pattern.Pitch * 6, pattern.Pitch * 4);
+            var holes = PatternGeometry.Holes(pattern, area, out _);
+            var geometry = new StreamGeometry();
+            using (StreamGeometryContext context = geometry.Open())
+            {
+                foreach (Hole hole in holes)
+                {
+                    context.BeginFigure(hole.Points[0], true, true);
+                    for (int i = 1; i < hole.Points.Length; i++)
+                        context.LineTo(hole.Points[i], false, false);
+                }
+            }
+            geometry.Freeze();
+
+            var drawing = new DrawingGroup();
+            drawing.Children.Add(new GeometryDrawing(Brush(ColorMath.Rgb(0xF2F2F2)), null, new RectangleGeometry(area)));
+            drawing.Children.Add(new GeometryDrawing(Brush(ColorMath.Rgb(0x3D5566)), null, geometry));
+            var image = new DrawingImage(drawing);
+            image.Freeze();
+            return image;
         }
 
         private static void AddLetters(Grid grid, SignSettings s, RuleResult rules, BitmapSource mask, BitmapSource original, bool night, double px)

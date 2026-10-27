@@ -137,6 +137,10 @@ namespace ReklamaMaket
             };
             AlignCombo.SelectedIndex = 0;
 
+            PatternCombo.ItemsSource = PatternStyles.All.Select(pattern => new PatternItem(pattern)).ToList();
+            BackgroundLightCombo.ItemsSource = BackgroundLights.All
+                .Select(light => new Choice<BackgroundLight>(BackgroundLights.Name(light), light)).ToList();
+
             AddSwatches(BackgroundSwatches, BackgroundPresets, "Background");
             AddSwatches(LightSwatches, LightPresets, "Light");
         }
@@ -170,9 +174,6 @@ namespace ReklamaMaket
             {
                 WriteLength(DepthBox, style.DefaultDepth);
                 LetterDescription.Text = style.Description + (style.Illuminated ? string.Empty : " Yoritilmaydi.");
-                LightButton.IsEnabled = style.Illuminated;
-                LightHex.IsEnabled = style.Illuminated;
-                LightSwatches.IsEnabled = style.Illuminated;
                 UpdateColorControls();
             }
             finally
@@ -192,6 +193,10 @@ namespace ReklamaMaket
             {
                 WriteLength(BackgroundDepthBox, style.DefaultDepth);
                 BackgroundDescription.Text = style.Description;
+                PatternPanel.Visibility = style.HasPattern ? Visibility.Visible : Visibility.Collapsed;
+                LightingPanel.Visibility = style.SupportsLighting ? Visibility.Visible : Visibility.Collapsed;
+                PatternCombo.SelectedIndex = style.DefaultPattern;
+                BackgroundLightCombo.SelectedIndex = Array.IndexOf(BackgroundLights.All, style.DefaultLight);
                 AutoSizeCheck.IsEnabled = style.Kind != BackgroundKind.Wall;
                 UpdateBackgroundSizeEnabled();
                 UpdateColorControls();
@@ -237,8 +242,12 @@ namespace ReklamaMaket
             }
 
             var align = AlignCombo.SelectedItem as Choice<LogoAlign>;
+            var pattern = PatternCombo.SelectedItem as PatternItem;
+            var backgroundLight = BackgroundLightCombo.SelectedItem as Choice<BackgroundLight>;
             return new SignSettings
             {
+                Pattern = pattern != null ? pattern.Style : PatternStyles.All[background.DefaultPattern],
+                BackgroundLight = background.SupportsLighting && backgroundLight != null ? backgroundLight.Value : BackgroundLight.None,
                 Letter = LetterCombo.SelectedItem as LetterStyle ?? LetterStyles.All[0],
                 LogoWidth = logoWidth,
                 LogoHeight = logoHeight,
@@ -339,6 +348,8 @@ namespace ReklamaMaket
             WarningBox.Visibility = rules.HasWarnings ? Visibility.Visible : Visibility.Collapsed;
             WarningText.Text = string.Join("\n", rules.Warnings.Select(w => "⚠ " + w));
 
+            UpdateFullPrompt(settings, rules);
+
             if (settings.AutoBackgroundSize)
             {
                 // Qo'lda o'lchamga o'tilganda shu qiymatlardan boshlanadi
@@ -348,6 +359,15 @@ namespace ReklamaMaket
                 WriteLength(BackgroundHeightBox, layout.BackgroundHeight);
                 suppressEvents = previous;
             }
+        }
+
+        /// <summary>ChatGPT'ga ketadigan to'liq so'rov (panelda ko'rish uchun).</summary>
+        private void UpdateFullPrompt(SignSettings settings, RuleResult rules)
+        {
+            bool nightReference = SourceLastRadio.IsChecked == true && settings.DrawNight;
+            string day = PromptBuilder.Build(settings, rules, PromptBox.Text, false, false, photoPath != null);
+            string night = PromptBuilder.Build(settings, rules, PromptBox.Text, true, nightReference, photoPath != null);
+            FullPromptBox.Text = "— KUNDUZI —\n" + day + "\n\n— KECHASI —\n" + night;
         }
 
         private void UpdateUnitTexts()
@@ -755,6 +775,7 @@ namespace ReklamaMaket
             photoPath = null;
             PhotoText.Text = "tanlanmagan";
             PhotoText.ToolTip = null;
+            ScheduleRefresh();
         }
 
         private bool PickPhoto()
@@ -776,6 +797,7 @@ namespace ReklamaMaket
             photoPath = dialog.FileName;
             PhotoText.Text = Path.GetFileName(photoPath);
             PhotoText.ToolTip = photoPath;
+            ScheduleRefresh();
             return true;
         }
 
@@ -997,6 +1019,21 @@ namespace ReklamaMaket
         {
             refreshTimer.Stop();
             SaveAiSettings();
+        }
+
+        /// <summary>Gul ro'yxati elementi: nom + kichik rasm.</summary>
+        private sealed class PatternItem
+        {
+            public PatternItem(PatternStyle style)
+            {
+                Style = style;
+                Thumbnail = PreviewBuilder.PatternThumbnail(style);
+            }
+
+            public PatternStyle Style { get; }
+            public string Name => Style.Name;
+            public string EnglishName => Style.EnglishName;
+            public ImageSource Thumbnail { get; }
         }
 
         /// <summary>ComboBox uchun nom + qiymat.</summary>
