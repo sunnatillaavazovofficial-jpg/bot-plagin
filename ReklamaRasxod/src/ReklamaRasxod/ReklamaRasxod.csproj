@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>ReklamaRasxod</RootNamespace>
+    <AssemblyName>ReklamaRasxod</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Version>0.1.0</Version>
+    <Product>Reklama Rasxod</Product>
+    <Description>CorelDRAW uchun dizayn bo'yicha material rasxodi va smeta paneli</Description>
+  </PropertyGroup>
+
+  <!--
+    CorelDRAW o'rnatilgan papka (Programs64). build.bat uni avtomatik topadi va
+    CorelPath.local.props fayliga yozib qo'yadi (keyin Visual Studio ham shu yo'ldan foydalanadi).
+  -->
+  <Import Project="CorelPath.local.props" Condition="Exists('CorelPath.local.props')" />
+  <PropertyGroup>
+    <CorelPath Condition="'$(CorelPath)' == ''">C:\Program Files\Corel\CorelDRAW Graphics Suite 2021\Programs64\</CorelPath>
+    <CorelPath Condition="!HasTrailingSlash('$(CorelPath)')">$(CorelPath)\</CorelPath>
+    <VGCorePath Condition="'$(VGCorePath)' == ''">$(CorelPath)Assemblies\Corel.Interop.VGCore.dll</VGCorePath>
+    <!-- Dizaynlar (harf, fon, gul), qoidalar va ko'rinish Reklama Maket bilan umumiy -->
+    <MaketSrc>$(MSBuildThisFileDirectory)..\..\..\ReklamaMaket\src\ReklamaMaket\</MaketSrc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Corel.Interop.VGCore">
+      <HintPath>$(VGCorePath)</HintPath>
+      <Private>false</Private>
+      <EmbedInteropTypes>false</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Visual Studio'siz (faqat dotnet SDK bilan) ham yig'ilishi uchun -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reklama Maket'dan: dizaynlar ro'yxati, sozlamalar, qoidalar, detallar, joylashuv va panel ko'rinishi -->
+    <Compile Include="$(MaketSrc)Designs\*.cs" LinkBase="Maket\Designs" />
+    <Compile Include="$(MaketSrc)Core\ColorMath.cs;$(MaketSrc)Core\CorelService.cs;$(MaketSrc)Core\DesignSnapshot.cs;$(MaketSrc)Core\LengthUnit.cs;$(MaketSrc)Core\LogoInfo.cs;$(MaketSrc)Core\LogoLayout.cs;$(MaketSrc)Core\PatternGeometry.cs;$(MaketSrc)Core\SignDetails.cs;$(MaketSrc)Core\SignRules.cs;$(MaketSrc)Core\SignSettings.cs;$(MaketSrc)Core\UserException.cs" LinkBase="Maket\Core" />
+    <Compile Include="$(MaketSrc)Rendering\PreviewBuilder.cs" LinkBase="Maket\Rendering" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- CorelDRAW paneli shu fayllar orqali ro'yxatdan o'tadi -->
+    <None Update="AppUI.xslt;UserUI.xslt;CorelDrw.addon" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="CheckMaketSources" BeforeTargets="CoreCompile" Condition="!Exists('$(MaketSrc)Designs\LetterStyle.cs')">
+    <Error Text="Reklama Maket manba kodi topilmadi: $(MaketSrc)&#10;ReklamaRasxod papkasi ReklamaMaket papkasi bilan yonma-yon turishi kerak (bot-plagin repozitoriyasi)." />
+  </Target>
+
+  <Target Name="CheckCorelInterop" BeforeTargets="ResolveAssemblyReferences" Condition="!Exists('$(VGCorePath)')">
+    <Error Text="Corel.Interop.VGCore.dll topilmadi: $(VGCorePath)&#10;build.bat ni ishga tushiring yoki CorelPath ni ko'rsating, masalan:&#10;dotnet build -p:CorelPath=&quot;C:\Program Files\Corel\CorelDRAW Graphics Suite 2021\Programs64&quot;" />
+  </Target>
+
+</Project>

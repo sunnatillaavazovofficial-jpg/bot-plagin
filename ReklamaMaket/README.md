@@ -24,6 +24,9 @@ yuborib, uning kunduzgi va kechki **real ko'rinishini** oladi (har kim o'z API k
    `Hujjatlar\ReklamaMaket\ChatGPT\<sana>` papkasiga saqlanadi.
    **"Dizayn chizilgach avtomatik yuborish"** belgilansa, 4-qadamdan keyin o'zi yuboradi.
 
+Chizilgan dizayn `%APPDATA%\ReklamaMaket\last-design.json` (va logo — `last-logo.png`) ga saqlanadi:
+[Reklama Rasxod](../ReklamaRasxod/) plagini shu dizayn bo'yicha material rasxodi va smetani hisoblaydi.
+
 ## Qoidalar (ogohlantirish beriladi)
 
 | Shart | Natija |

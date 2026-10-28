@@ -652,6 +652,8 @@ namespace ReklamaMaket
                 }
 
                 lastResult = new ChannelLetterRenderer(corelApp).Draw(doc, settings, logo);
+                // Reklama Rasxod plagini shu dizayn bo'yicha material hisoblashi uchun
+                DesignSnapshot.TrySave(settings, logo);
                 SetStatus(string.Format("Tayyor: \"{0}\" dizayni {1} chizildi. Bekor qilish — Ctrl+Z.",
                     settings.Letter.Name, settings.NewPage ? "yangi sahifada" : "joriy sahifada"), false);
                 return true;
