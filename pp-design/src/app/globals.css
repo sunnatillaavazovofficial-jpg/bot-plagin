@@ -1,0 +1,204 @@
+@import "tailwindcss";
+
+/*
+ * ===== RANGLAR =====
+ * Logo ranglari shu yerda: --color-brand (asosiy), --color-brand-2 (aksent), --color-brand-3 (qo'shimcha).
+ * Logoni almashtirsangiz, faqat shu uchta rangni o'zgartiring — sayt, robot va intro avtomatik moslashadi.
+ */
+@theme {
+  --color-brand: #38c8ff;
+  --color-brand-2: #7b61ff;
+  --color-brand-3: #ff5ccd;
+
+  --color-ink-950: #050b1c;
+  --color-ink-900: #0b1530;
+  --color-ink-850: #0e1a3a;
+  --color-ink-800: #122045;
+  --color-ink-700: #1a2b57;
+  --color-ink-600: #243766;
+  --color-mist: #c7d2f0;
+  --color-muted: #8794bb;
+
+  --font-display: var(--font-unbounded), "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-manrope), "Segoe UI", system-ui, sans-serif;
+
+  --animate-marquee-right: marquee-right var(--marquee-duration, 40s) linear infinite;
+  --animate-marquee-left: marquee-left var(--marquee-duration, 40s) linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes marquee-right {
+    from { transform: translateX(-50%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes marquee-left {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-14px); }
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--color-ink-900);
+  color: #fff;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-brand) 40%, transparent);
+}
+
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .glass {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.025));
+    border: 1px solid rgb(255 255 255 / 0.09);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .text-gradient {
+    background: linear-gradient(100deg, var(--color-brand), var(--color-brand-2) 55%, var(--color-brand-3));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .btn,
+  .btn-primary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition duration-200 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply text-ink-950;
+    background: linear-gradient(100deg, var(--color-brand), color-mix(in oklab, var(--color-brand) 55%, var(--color-brand-2)));
+    box-shadow: 0 10px 30px -10px color-mix(in oklab, var(--color-brand) 70%, transparent);
+  }
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+  .btn-ghost {
+    @apply border border-white/15 bg-white/5 text-white hover:border-white/30 hover:bg-white/10;
+  }
+  .btn-danger {
+    @apply border border-rose-400/30 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-white/10 bg-ink-950/60 px-4 py-3 text-sm text-white placeholder:text-muted/70 outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/20;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold tracking-wide text-mist/80 uppercase;
+  }
+
+  .section-eyebrow {
+    @apply mb-3 inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand/10 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-brand uppercase;
+  }
+  .section-title {
+    @apply font-display text-3xl leading-tight font-semibold sm:text-4xl lg:text-5xl;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-mist;
+  }
+}
+
+/* Fon: nozik setka va nur dog'lari */
+.bg-grid {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+.glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Marquee: sichqoncha ustida to'xtaydi */
+.marquee:hover .marquee-track,
+.marquee:focus-within .marquee-track {
+  animation-play-state: paused;
+}
+.marquee {
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+
+/* Skrollda paydo bo'lish */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Kartochka chegarasi "chiziladi" */
+.draw-border rect {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 1.6s cubic-bezier(0.6, 0, 0.2, 1);
+}
+.is-visible .draw-border rect {
+  stroke-dashoffset: 0;
+}
+.draw-content {
+  opacity: 0;
+  transition: opacity 0.7s ease 0.9s;
+}
+.is-visible .draw-content {
+  opacity: 1;
+}
+
+.caret::after {
+  content: "";
+  display: inline-block;
+  width: 0.08em;
+  height: 1em;
+  margin-left: 0.08em;
+  vertical-align: -0.12em;
+  background: var(--color-brand);
+  animation: caret 1s steps(1) infinite;
+}
+@keyframes intro-caption {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rb-talk {
+  from { transform: scaleY(1); }
+  to { transform: scaleY(3.4); }
+}
+@keyframes caret {
+  50% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .marquee-track { animation: none !important; }
+  .reveal, .draw-content { opacity: 1; transform: none; transition: none; }
+  .draw-border rect { stroke-dashoffset: 0; transition: none; }
+}

@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENT
+  DESIGNER
+  ADMIN
+}
+
+enum DesignerStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  BLOCKED
+}
+
+/// Saytdagi har qanday foydalanuvchi: mijoz (telefon bilan), dizayner yoki admin (Telegram bilan)
+model User {
+  id               String   @id @default(cuid())
+  role             Role
+  name             String?
+  phone            String?  @unique
+  telegramId       BigInt?  @unique
+  telegramUsername String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  designer Designer?
+  reviews  Review[]
+}
+
+model Designer {
+  id              String         @id @default(cuid())
+  userId          String         @unique
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Profil manzili: /designer/<username>
+  username        String         @unique
+  fullName        String
+  specialty       String         @default("")
+  bio             String         @default("")
+  experienceYears Int            @default(0)
+  experience      String         @default("")
+  skills          String[]       @default([])
+  avatarUrl       String?
+  /// [{ "title": "Logotip", "price": "500 000 so'm dan" }]
+  prices          Json           @default("[]")
+  /// { "instagram": "", "telegram": "", "behance": "", "dribbble": "", "website": "" }
+  socials         Json           @default("{}")
+  contactPhone    String?
+  contactEmail    String?
+  status          DesignerStatus @default(PENDING)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  approvedAt      DateTime?
+
+  portfolio PortfolioItem[]
+  reviews   Review[]
+
+  @@index([status])
+}
+
+model PortfolioItem {
+  id          String   @id @default(cuid())
+  designerId  String
+  designer    Designer @relation(fields: [designerId], references: [id], onDelete: Cascade)
+  title       String
+  description String   @default("")
+  imageUrl    String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([designerId, order])
+}
+
+/// Mijozning dizaynerga qoldirgan otzivi (bitta mijoz — bitta dizaynerga bitta otziv, qayta yozsa yangilanadi)
+model Review {
+  id         String   @id @default(cuid())
+  designerId String
+  designer   Designer @relation(fields: [designerId], references: [id], onDelete: Cascade)
+  clientId   String
+  client     User     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  rating     Int
+  text       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([designerId, clientId])
+  @@index([designerId, createdAt])
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  codeHash  String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+}
+
+/// Kompaniyaning asosiy qilgan ishlari (bosh sahifadagi portfolio)
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  category    String   @default("")
+  description String   @default("")
+  imageUrl    String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model Partner {
+  id        String   @id @default(cuid())
+  name      String
+  logoUrl   String
+  url       String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+/// Admin tahrirlaydigan sayt sozlamalari (kompaniya, aloqa, matnlar) — JSON ko'rinishida
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
