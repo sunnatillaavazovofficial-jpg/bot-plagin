@@ -48,13 +48,13 @@
   <ItemGroup>
     <!-- Reklama Maket'dan: dizaynlar ro'yxati, sozlamalar, qoidalar, detallar, joylashuv va panel ko'rinishi -->
     <Compile Include="$(MaketSrc)Designs\*.cs" LinkBase="Maket\Designs" />
-    <Compile Include="$(MaketSrc)Core\ColorMath.cs;$(MaketSrc)Core\CorelService.cs;$(MaketSrc)Core\DesignSnapshot.cs;$(MaketSrc)Core\LengthUnit.cs;$(MaketSrc)Core\LogoInfo.cs;$(MaketSrc)Core\LogoLayout.cs;$(MaketSrc)Core\PatternGeometry.cs;$(MaketSrc)Core\SignDetails.cs;$(MaketSrc)Core\SignRules.cs;$(MaketSrc)Core\SignSettings.cs;$(MaketSrc)Core\UserException.cs" LinkBase="Maket\Core" />
+    <Compile Include="$(MaketSrc)Core\ColorMath.cs;$(MaketSrc)Core\CorelIcon.cs;$(MaketSrc)Core\CorelService.cs;$(MaketSrc)Core\DesignSnapshot.cs;$(MaketSrc)Core\ErrorLog.cs;$(MaketSrc)Core\LengthUnit.cs;$(MaketSrc)Core\LogoInfo.cs;$(MaketSrc)Core\LogoLayout.cs;$(MaketSrc)Core\PatternGeometry.cs;$(MaketSrc)Core\SignDetails.cs;$(MaketSrc)Core\SignRules.cs;$(MaketSrc)Core\SignSettings.cs;$(MaketSrc)Core\UserException.cs" LinkBase="Maket\Core" />
     <Compile Include="$(MaketSrc)Rendering\PreviewBuilder.cs" LinkBase="Maket\Rendering" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- CorelDRAW paneli shu fayllar orqali ro'yxatdan o'tadi -->
-    <None Update="AppUI.xslt;UserUI.xslt;CorelDrw.addon" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="AppUI.xslt;UserUI.xslt;CorelDrw.addon;icon.ico" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="CheckMaketSources" BeforeTargets="CoreCompile" Condition="!Exists('$(MaketSrc)Designs\LetterStyle.cs')">

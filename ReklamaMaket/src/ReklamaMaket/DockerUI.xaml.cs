@@ -74,40 +74,64 @@ namespace ReklamaMaket
 
         public DockerUI(object app)
         {
-            InitializeComponent();
-
-            corelApp = app as corel.Application;
-            corelService = new CorelService(corelApp);
-            appSettings = AppSettings.Load();
-
-            refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
-            refreshTimer.Tick += (sender, e) =>
+            try
             {
-                refreshTimer.Stop();
+                InitializeComponent();
+
+                corelApp = app as corel.Application;
+                corelService = new CorelService(corelApp);
+                appSettings = AppSettings.Load();
+
+                refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+                refreshTimer.Tick += (sender, e) =>
+                {
+                    refreshTimer.Stop();
+                    RefreshPreview();
+                };
+
+                ApiKeyLink.NavigateUri = new Uri(OpenAiImageClient.ApiKeysUrl);
+                SetupLists();
+                LoadAiSettings();
+
+                WriteLength(LogoHeightBox, 600);
+                WriteLength(LogoWidthBox, 2000);
+                WriteLength(MarginBox, 150);
+                UpdateUnitTexts();
+
+                LetterCombo.SelectedIndex = 0;
+                BackgroundCombo.SelectedIndex = 0;
+                ApplyLetterStyle(LetterStyles.All[0]);
+                ApplyBackgroundStyle(BackgroundStyles.All[0]);
+
+                suppressEvents = false;
                 RefreshPreview();
-            };
 
-            ApiKeyLink.NavigateUri = new Uri(OpenAiImageClient.ApiKeysUrl);
-            SetupLists();
-            LoadAiSettings();
+                if (corelApp == null)
+                    SetStatus("CorelDRAW bilan bog'lanib bo'lmadi (VGCore).", true);
+                else
+                    SetStatus("Corelda logoni belgilang va \"Tanlangan logoni olish\" tugmasini bosing.", false);
 
-            WriteLength(LogoHeightBox, 600);
-            WriteLength(LogoWidthBox, 2000);
-            WriteLength(MarginBox, 150);
-            UpdateUnitTexts();
+                Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(ApplyToolbarIcon));
+            }
+            catch (Exception ex)
+            {
+                // Panel ochilmay qolsa — sababini ko'rsatamiz va jurnalga yozamiz
+                string log = ErrorLog.Write("ReklamaMaket", ex);
+                MessageBox.Show("Panelni ochishda xato:\n\n" + ex.Message + (log != null ? "\n\nTafsilot: " + log : string.Empty),
+                    "Reklama Maket", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
 
-            LetterCombo.SelectedIndex = 0;
-            BackgroundCombo.SelectedIndex = 0;
-            ApplyLetterStyle(LetterStyles.All[0]);
-            ApplyBackgroundStyle(BackgroundStyles.All[0]);
+        private static bool iconApplied;
 
-            suppressEvents = false;
-            RefreshPreview();
-
-            if (corelApp == null)
-                SetStatus("CorelDRAW bilan bog'lanib bo'lmadi (VGCore).", true);
-            else
-                SetStatus("Corelda logoni belgilang va \"Tanlangan logoni olish\" tugmasini bosing.", false);
+        /// <summary>Asboblar panelidagi tugmaga plagin rasmi (icon.ico) — Corel sessiyasida bir marta.</summary>
+        private void ApplyToolbarIcon()
+        {
+            if (iconApplied)
+                return;
+            iconApplied = true;
+            string folder = Path.GetDirectoryName(typeof(DockerUI).Assembly.Location) ?? string.Empty;
+            CorelIcon.TryApply(corelApp, "dbac5bef-29c2-4fba-a4f9-79809933b8c0", Path.Combine(folder, "icon.ico"));
         }
 
         private TextBox[] LengthBoxes => new[]
@@ -702,7 +726,7 @@ namespace ReklamaMaket
             }
             catch (Exception ex)
             {
-                SetStatus("Xatolik: " + ex.Message, true);
+                SetStatus(ErrorLog.Describe("ReklamaMaket", ex), true);
             }
             finally
             {

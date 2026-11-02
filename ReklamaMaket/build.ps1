@@ -21,7 +21,7 @@ $Root = $PSScriptRoot
 $ProjectDir = Join-Path $Root "src\ReklamaMaket"
 $Project = Join-Path $ProjectDir "ReklamaMaket.csproj"
 $OutDir = Join-Path $Root "bin"
-$AddonFiles = @("ReklamaMaket.dll", "ReklamaMaket.pdb", "AppUI.xslt", "UserUI.xslt", "CorelDrw.addon")
+$AddonFiles = @("ReklamaMaket.dll", "ReklamaMaket.pdb", "AppUI.xslt", "UserUI.xslt", "CorelDrw.addon", "icon.ico")
 
 function Find-CorelInstalls {
     $bases = @("$env:ProgramFiles\Corel", "$env:ProgramW6432\Corel") |

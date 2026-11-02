@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -43,48 +44,72 @@ namespace ReklamaRasxod
 
         public DockerUI(object app)
         {
-            InitializeComponent();
-
-            corelApp = app as corel.Application;
-            corelService = new CorelService(corelApp);
-            store = RasxodSettings.Load();
-
-            refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
-            refreshTimer.Tick += (sender, e) =>
+            try
             {
-                refreshTimer.Stop();
+                InitializeComponent();
+
+                corelApp = app as corel.Application;
+                corelService = new CorelService(corelApp);
+                store = RasxodSettings.Load();
+
+                refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+                refreshTimer.Tick += (sender, e) =>
+                {
+                    refreshTimer.Stop();
+                    RefreshAll();
+                };
+                saveTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+                saveTimer.Tick += (sender, e) =>
+                {
+                    saveTimer.Stop();
+                    SaveStore();
+                };
+
+                SetupLists();
+                SetupEstimate();
+
+                WriteLength(LogoHeightBox, 600);
+                WriteLength(LogoWidthBox, 2000);
+                WriteLength(MarginBox, 150);
+                UpdateUnitTexts();
+
+                LetterCombo.SelectedIndex = 0;
+                BackgroundCombo.SelectedIndex = 0;
+                ApplyLetterStyle(LetterStyles.All[0]);
+                ApplyBackgroundStyle(BackgroundStyles.All[0]);
+                UpdateImportInfo();
+                // Reklama Maket'da yangi dizayn chizilgan bo'lsa, yozuv yangilansin
+                MouseEnter += (sender, e) => UpdateImportInfo();
+
+                suppressEvents = false;
                 RefreshAll();
-            };
-            saveTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
-            saveTimer.Tick += (sender, e) =>
+
+                if (corelApp == null)
+                    SetStatus("CorelDRAW bilan bog'lanib bo'lmadi (VGCore).", true);
+                else
+                    SetStatus("Corelda logoni belgilang va \"Tanlangan logoni olish\"ni bosing — yoki Reklama Maket dizaynini oling.", false);
+
+                Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(ApplyToolbarIcon));
+            }
+            catch (Exception ex)
             {
-                saveTimer.Stop();
-                SaveStore();
-            };
+                // Panel ochilmay qolsa — sababini ko'rsatamiz va jurnalga yozamiz
+                string log = ErrorLog.Write("ReklamaRasxod", ex);
+                MessageBox.Show("Panelni ochishda xato:\n\n" + ex.Message + (log != null ? "\n\nTafsilot: " + log : string.Empty),
+                    "Reklama Rasxod", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
 
-            SetupLists();
-            SetupEstimate();
+        private static bool iconApplied;
 
-            WriteLength(LogoHeightBox, 600);
-            WriteLength(LogoWidthBox, 2000);
-            WriteLength(MarginBox, 150);
-            UpdateUnitTexts();
-
-            LetterCombo.SelectedIndex = 0;
-            BackgroundCombo.SelectedIndex = 0;
-            ApplyLetterStyle(LetterStyles.All[0]);
-            ApplyBackgroundStyle(BackgroundStyles.All[0]);
-            UpdateImportInfo();
-            // Reklama Maket'da yangi dizayn chizilgan bo'lsa, yozuv yangilansin
-            MouseEnter += (sender, e) => UpdateImportInfo();
-
-            suppressEvents = false;
-            RefreshAll();
-
-            if (corelApp == null)
-                SetStatus("CorelDRAW bilan bog'lanib bo'lmadi (VGCore).", true);
-            else
-                SetStatus("Corelda logoni belgilang va \"Tanlangan logoni olish\"ni bosing — yoki Reklama Maket dizaynini oling.", false);
+        /// <summary>Asboblar panelidagi tugmaga plagin rasmi (icon.ico) — Corel sessiyasida bir marta.</summary>
+        private void ApplyToolbarIcon()
+        {
+            if (iconApplied)
+                return;
+            iconApplied = true;
+            string folder = Path.GetDirectoryName(typeof(DockerUI).Assembly.Location) ?? string.Empty;
+            CorelIcon.TryApply(corelApp, "3edbfa85-fa48-42c6-8284-cab530e86c32", Path.Combine(folder, "icon.ico"));
         }
 
         private TextBox[] LengthBoxes => new[]
@@ -350,7 +375,7 @@ namespace ReklamaRasxod
             }
             catch (Exception ex)
             {
-                SetStatus("Rasxodni hisoblashda xato: " + ex.Message, true);
+                SetStatus("Rasxodni hisoblashda " + ErrorLog.Describe("ReklamaRasxod", ex).Replace("Xatolik", "xato"), true);
             }
         }
 
@@ -695,7 +720,7 @@ namespace ReklamaRasxod
             }
             catch (Exception ex)
             {
-                SetStatus("Xatolik: " + ex.Message, true);
+                SetStatus(ErrorLog.Describe("ReklamaRasxod", ex), true);
             }
             finally
             {

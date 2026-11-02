@@ -148,6 +148,7 @@ Reklama Maket'dan umumiy fayllar (`Designs/*`, `Core/SignSettings`, `SignRules`,
 
 ## Muammolar
 
+- **Xatolik chiqsa** — to'liq tafsiloti `%APPDATA%\ReklamaRasxod\xato.log` fayliga yoziladi (panelda yo'li ko'rsatiladi). Muammoni topish uchun shu faylni yuboring.
 - **Panel bo'sh** — `Addons\ReklamaRasxod` dagi fayllarni *Properties → Unblock* qiling (build.bat buni o'zi qiladi).
 - **"Reklama Maket manba kodi topilmadi"** (yig'ishda) — `ReklamaRasxod` va `ReklamaMaket` papkalari yonma-yon bo'lishi kerak.
 - **Logo o'lchovi noto'g'ri** — logo orqasida to'rtburchak fon bilan tanlangan bo'lishi mumkin; faqat harflarni tanlang.

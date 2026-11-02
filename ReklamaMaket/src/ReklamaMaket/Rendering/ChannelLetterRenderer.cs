@@ -238,7 +238,7 @@ namespace ReklamaMaket.Rendering
             }
 
             logoTemplate = Temp(copies.Count > 1 ? copies.Group() : copies.FirstShape);
-            logoTemplate.MoveToLayer(layer);
+            logoTemplate = Temp(MoveToDrawingLayer(logoTemplate));
             logoTemplate.SetSize(lay.Logo.Width * k, lay.Logo.Height * k);
             logoTemplate.CenterX = ox + (lay.Logo.X + lay.Logo.Width / 2) * k;
             logoTemplate.CenterY = oy + (lay.BackgroundHeight - lay.Logo.Y - lay.Logo.Height / 2) * k;
@@ -298,6 +298,27 @@ namespace ReklamaMaket.Rendering
                 double side = SignDetails.SizeOf(s, Detail.FacePattern);
                 List<Point> points = InsidePoints(spacing * k, side * 0.75 * k, true, out double scale);
                 patternTemplate = Temp(Diamonds(points, side * k * scale));
+            }
+        }
+
+        /// <summary>
+        /// Andozani chizma qatlamiga ko'chiradi. Boshqa sahifaga ko'chirilganda Corel eski havolani yaroqsiz qiladi
+        /// ("Объект, на который указывает ссылка, больше не существует") — shunda ko'chirilgan obyekt qatlamdan qayta olinadi.
+        /// </summary>
+        private corel.Shape MoveToDrawingLayer(corel.Shape shape)
+        {
+            shape.MoveToLayer(layer);
+            try
+            {
+                _ = shape.SizeWidth; // havola hali ishlaydimi
+                return shape;
+            }
+            catch (Exception)
+            {
+                // Yangi sahifaning qatlami bo'sh edi — u yerdagi yagona obyekt shu andoza
+                foreach (corel.Shape moved in layer.Shapes)
+                    return moved;
+                throw;
             }
         }
 

@@ -52,7 +52,7 @@
 
   <ItemGroup>
     <!-- CorelDRAW paneli shu fayllar orqali ro'yxatdan o'tadi -->
-    <None Update="AppUI.xslt;UserUI.xslt;CorelDrw.addon" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="AppUI.xslt;UserUI.xslt;CorelDrw.addon;icon.ico" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="CheckCorelInterop" BeforeTargets="ResolveAssemblyReferences" Condition="!Exists('$(VGCorePath)')">

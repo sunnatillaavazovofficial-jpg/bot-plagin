@@ -211,6 +211,7 @@ Fonga o'yilgan logo bo'lsa, oxiriga `{ Cut = CutMode.RoutedLit }` (yoki `PushThr
 
 ## Muammolar
 
+- **Xatolik chiqsa** — to'liq tafsiloti `%APPDATA%\ReklamaMaket\xato.log` fayliga yoziladi (panelda yo'li ko'rsatiladi). Muammoni topish uchun shu faylni yuboring.
 - **Panel bo'sh** — `Addons\ReklamaMaket` dagi fayllarni *Properties → Unblock* qiling (build.bat buni o'zi qiladi).
 - **"Logoni yaxlit konturga aylantirib bo'lmadi"** — logoda rasm (bitmap) bor; avval *Trace Bitmap* qiling.
 - **ChatGPT 401** — kalit noto'g'ri; **403** — tashkilotni tasdiqlash kerak; **429** — limit yoki balans tugagan.
