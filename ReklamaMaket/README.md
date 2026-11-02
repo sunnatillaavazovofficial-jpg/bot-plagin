@@ -15,9 +15,9 @@ pastda uchta tugma.
 | **Harf** | harf turi, qalinligi, ranglar (oldi, yoni, chiroq) va qo'shimcha sozlamalar |
 | **Fon** | fon turi, gul, fonning qayeri yonadi, rangi, o'lchami va qo'shimcha sozlamalar |
 | **Joyida** | bino rasmini tanlash — logo shu rasm ustida turadi (sichqoncha bilan suriladi) |
-| **AI** (ChatGPT) | API kalit, kunduzi / kechasi, real rasm yaratish |
+| **AI** (ChatGPT) | OpenAI API kalit, kunduzi / kechasi, real rasm yaratish |
 
-Pastki tugmalar: **⚙** — chizma sozlamalari (masshtab, kechki ko'rinish, yon kesim, o'lchamlar, yangi sahifa),
+Pastki tugmalar: **⚙** — chizma sozlamalari (masshtab, kechki ko'rinish, yon kesim, o'lchamlar, yangi sahifa, litsenziya),
 **Corel'da chizish**, **➤** — ChatGPT bilan real rasm.
 
 ## Ish tartibi
@@ -153,7 +153,7 @@ Logo rasmdan chiqib ketmaydi.
 ## ChatGPT'ni ulash
 
 1. [platform.openai.com/api-keys](https://platform.openai.com/api-keys) sahifasida API kalit yarating
-   (panelda **Kalit olish →** havolasi shu sahifani ochadi).
+   (panelda **OpenAI kalit olish →** havolasi shu sahifani ochadi).
 2. OpenAI hisobingizda **Billing** (to'lov) yoqilgan bo'lishi kerak — har bir rasm uchun sizning hisobingizdan
    to'lanadi. Rasm modellari uchun ba'zan tashkilotni tasdiqlash
    ([Organization verification](https://platform.openai.com/settings/organization/general)) ham so'raladi.
@@ -171,16 +171,51 @@ Standart model — `gpt-image-2`; ro'yxatda `gpt-image-2.5-flare`, `gpt-image-2.
 **Topshiriq matni**ni o'zgartirsangiz saqlanib qoladi; **Asl holi** tugmasi asl matnni qaytaradi.
 Harf/fon turi, o'lcham, qoidalar, joy rasmi va kunduzi/kechasi so'rovga avtomatik qo'shiladi.
 
-## O'rnatish
+## O'rnatish (xaridor uchun)
 
-Talablar: Windows 10/11, CorelDRAW X7 yoki yangisi (64-bit), hamda bittasi:
-[.NET SDK](https://dotnet.microsoft.com/download) **yoki** Visual Studio 2022 (".NET desktop development").
+Plagin [sunnatilla-designer.uz](https://sunnatilla-designer.uz/) saytidan tayyor paket sifatida yuklanadi —
+xaridorga .NET SDK yoki boshqa dastur kerak emas. Talab: Windows 10/11 va CorelDRAW (64-bit).
 
-1. CorelDRAW'ni yoping.
-2. `ReklamaMaket\build.bat` ni ikki marta bosing — skript Corel'ni topadi, plaginni yig'adi va
-   `...\Programs64\Addons\ReklamaMaket\` papkasiga nusxalaydi (administrator ruxsatini so'raydi).
-3. CorelDRAW'ni oching: **Reklama → Reklama Maket** menyusi yoki standart asboblar panelidagi tugma.
-   Ko'rinmasa — CorelDRAW'ni **F8** bosib turgan holda ishga tushiring.
+1. Saytdan **ReklamaMaket-setup.zip** ni yuklab, papkaga oching (o'ng tugma → *Extract All*).
+2. CorelDRAW'ni yoping va **install.bat** ni ikki marta bosing
+   (*More info → Run anyway*, ruxsat so'ralsa — *Yes*). Kompyuterdagi barcha CorelDRAW'larga o'rnatiladi.
+3. CorelDRAW'ni oching: **Reklama → Reklama Maket**. Ko'rinmasa — **F8** ni bosib turgan holda oching.
+4. **Faollashtirish:** paneldagi **kompyuter kodingiz**ni nusxalab, sayt orqali yuboring. Olingan
+   **litsenziya kaliti**ni panelga qo'yib **Faollashtirish** ni bosing. Kalit faqat shu kompyuterda ishlaydi.
+
+O'chirish: `install.bat -Uninstall`.
+
+## Sotuvchi uchun: kalitlar va paket
+
+Kalit — kompyuter kodiga bog'langan, sotuvchining maxfiy kaliti bilan imzolangan matn (`RM-…`).
+Plagin ichida faqat ochiq kalit bor: kalitni soxtalashtirib yoki boshqa kompyuterga o'tkazib bo'lmaydi.
+
+**Bir marta** (.NET SDK kerak):
+
+1. `keygen.bat` → **1) Birinchi sozlash**. Maxfiy kalit
+   `%APPDATA%\ReklamaMaket-KeyGen\maxfiy-kalit.json` ga yoziladi, ochiq kalit esa plagin kodiga
+   (`src/ReklamaMaket/Licensing/LicensePublicKey.cs`). **Maxfiy kalit faylining zaxira nusxasini saqlang
+   va hech kimga bermang** — yo'qolsa, yangi kalit berish uchun plaginni yangi kalit bilan qayta tarqatish kerak.
+2. `package.bat` — plaginni kompyuterdagi har bir CorelDRAW versiyasi uchun yig'adi va
+   `dist\ReklamaMaket-setup.zip` ni tayyorlaydi. Shu faylni saytga qo'ying.
+   Boshqa versiyalar uchun ularning `Corel.Interop.VGCore.dll` faylini `interops\<nom>\` papkasiga
+   qo'yib, `package.bat` ni qayta ishga tushiring (versiyasi o'zi aniqlanadi).
+
+**Har bir xaridor uchun:** xaridor kompyuter kodini yuboradi → `keygen.bat` → **2) Litsenziya kaliti
+yaratish** (kod, ism, muddat kunda; 0 — muddatsiz) → chiqqan kalitni xaridorga yuboring.
+Berilgan kalitlar ro'yxati: `%APPDATA%\ReklamaMaket-KeyGen\berilgan-kalitlar.csv`.
+O'zingizning kompyuteringiz uchun ham shu tarzda kalit yarating.
+
+Buyruq qatoridan: `keygen issue A1B2-C3D4-E5F6-0718 "Ism" 365`, `keygen check RM-…`.
+
+Eslatma: kalit tekshiruvi oddiy nusxalash va kalitni boshqalarga berishdan himoya qiladi; .NET dasturini
+buzib ochishga qarshi qo'shimcha himoya (obfuskatsiya) alohida qilinadi.
+
+## Dasturchi uchun: manba koddan yig'ish
+
+Talablar: [.NET SDK](https://dotnet.microsoft.com/download) **yoki** Visual Studio 2022.
+CorelDRAW'ni yopib, `build.bat` ni bosing — Corel topiladi, plagin yig'iladi va
+`...\Programs64\Addons\ReklamaMaket\` ga o'rnatiladi. Plagin ishlashi uchun baribir litsenziya kaliti kerak.
 
 Qo'shimcha: `build.bat -CorelPath "C:\...\Programs64"`, `build.bat -NoInstall`, `build.bat -Uninstall`.
 
@@ -188,7 +223,10 @@ Qo'shimcha: `build.bat -CorelPath "C:\...\Programs64"`, `build.bat -NoInstall`, 
 
 ```
 ReklamaMaket/
-├── build.bat, build.ps1            yig'ish va o'rnatish
+├── build.bat, build.ps1            manba koddan yig'ish va o'rnatish (dasturchi)
+├── package.bat, package.ps1        saytga qo'yiladigan paket (sotuvchi)
+├── keygen.bat, tools/KeyGen/       litsenziya kaliti generatori (sotuvchi)
+├── installer/                      xaridor paketidagi install.bat va qo'llanma
 └── src/ReklamaMaket/
     ├── AppUI.xslt, UserUI.xslt     Corel paneli, menyu va tugma
     ├── DockerUI.xaml(.cs)          panel
@@ -198,6 +236,8 @@ ReklamaMaket/
     ├── Designs/BackgroundStyle.cs  fon dizaynlari ro'yxati
     ├── Designs/PatternStyle.cs     gullar (perforatsiya, setka) ro'yxati
     ├── DockerUI.Details.cs         "Qo'shimcha" sozlamalar (rang va o'lcham)
+    ├── DockerUI.License.cs         faollashtirish oynasi
+    ├── Licensing/                  kalit formati (imzo tekshiruvi), kompyuter kodi
     ├── Core/                       sozlamalar, qoidalar (SignRules), detallar (SignDetails),
     │                               rasm ustida joylash (PhotoLayout), logo olish/eksport
     ├── Rendering/                  Corelda chizish va paneldagi ko'rinish
@@ -225,6 +265,8 @@ Fonga o'yilgan logo bo'lsa, oxiriga `{ Cut = CutMode.RoutedLit }` (yoki `PushThr
 
 ## Muammolar
 
-- **Panel bo'sh** — `Addons\ReklamaMaket` dagi fayllarni *Properties → Unblock* qiling (build.bat buni o'zi qiladi).
+- **Panel bo'sh** — `Addons\ReklamaMaket` dagi fayllarni *Properties → Unblock* qiling (install.bat buni o'zi qiladi).
+- **"Bu kalit boshqa kompyuter uchun"** — kalit boshqa kompyuter kodiga berilgan; panelda ko'rsatilgan kodni yuboring.
+- **"Kalit tizimi sozlanmagan"** — plagin `keygen.bat → Birinchi sozlash` qilinmasdan yig'ilgan.
 - **"Logoni yaxlit konturga aylantirib bo'lmadi"** — logoda rasm (bitmap) bor; avval *Trace Bitmap* qiling.
 - **ChatGPT 401** — kalit noto'g'ri; **403** — tashkilotni tasdiqlash kerak; **429** — limit yoki balans tugagan.

@@ -13,7 +13,8 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <DockPanel Background="{StaticResource PanelBrush}">
+    <Grid Background="{StaticResource PanelBrush}">
+    <DockPanel x:Name="MainView">
 
         <!-- Sarlavha -->
         <StackPanel DockPanel.Dock="Top" Margin="16,14,16,4">
@@ -54,6 +55,11 @@
                             <CheckBox x:Name="SectionCheck" IsChecked="True" Content="Yon kesim" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
                             <CheckBox x:Name="DimensionsCheck" IsChecked="True" Content="O'lchamlar" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
                             <CheckBox x:Name="NewPageCheck" IsChecked="True" Content="Yangi sahifada" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+
+                            <TextBlock Text="Litsenziya" FontWeight="SemiBold" Margin="0,10,0,2"/>
+                            <TextBlock x:Name="LicenseInfoText" Style="{StaticResource Hint}"/>
+                            <Button Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Content="Kalitni almashtirish"
+                                    Click="ChangeLicense_Click"/>
                         </StackPanel>
                     </ContentControl>
                 </Popup>
@@ -422,7 +428,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock VerticalAlignment="Center">
-                                <Hyperlink x:Name="ApiKeyLink" RequestNavigate="Link_RequestNavigate">Kalit olish →</Hyperlink>
+                                <Hyperlink x:Name="ApiKeyLink" RequestNavigate="Link_RequestNavigate">OpenAI kalit olish →</Hyperlink>
                             </TextBlock>
                             <Button x:Name="CheckKeyButton" Grid.Column="1" Style="{StaticResource SecondaryButton}" Content="Tekshirish"
                                     Click="CheckKeyButton_Click"/>
@@ -505,4 +511,54 @@
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
+
+    <!-- Faollashtirish: litsenziya kaliti bo'lmasa shu oyna ko'rinadi -->
+    <ScrollViewer x:Name="ActivationView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto"
+                  Background="{StaticResource PanelBrush}">
+        <StackPanel Margin="10,14,10,10">
+            <StackPanel Margin="6,0,6,10">
+                <TextBlock Text="CorelDRAW · tashqi reklama" Foreground="{StaticResource MutedBrush}"/>
+                <TextBlock Style="{StaticResource Title}" Text="Reklama Maket"/>
+            </StackPanel>
+            <ContentControl Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="40" Height="40" CornerRadius="20" Background="{StaticResource AccentSoftBrush}">
+                            <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{StaticResource AccentBrush}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Faollashtirish" FontSize="16" FontWeight="SemiBold"/>
+                            <TextBlock Style="{StaticResource Hint}" Text="Plagin litsenziya kaliti bilan ishlaydi"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Style="{StaticResource SectionTitle}" Margin="0,14,0,4" Text="1. Kompyuter kodingiz"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="MachineCodeBox" IsReadOnly="True" FontFamily="Consolas" FontSize="14" Margin="0,3,6,3"/>
+                        <Button Grid.Column="1" Style="{StaticResource SecondaryButton}" Content="Nusxa olish" Click="CopyMachineCode_Click"/>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Hint}" Text="Shu kodni kalit olishda yuboring."/>
+
+                    <TextBlock Style="{StaticResource SectionTitle}" Margin="0,12,0,4" Text="2. Litsenziya kaliti"/>
+                    <TextBox x:Name="LicenseKeyBox" Height="74" TextWrapping="Wrap" AcceptsReturn="False" VerticalContentAlignment="Top"
+                             FontFamily="Consolas" FontSize="12"/>
+                    <Button x:Name="ActivateButton" Style="{StaticResource PrimaryButton}" Margin="0,10,0,0" Content="Faollashtirish"
+                            Click="ActivateButton_Click"/>
+                    <TextBlock x:Name="LicenseStatusText" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+
+                    <TextBlock Margin="0,10,0,0">
+                        <Hyperlink x:Name="LicenseSiteLink" RequestNavigate="Link_RequestNavigate">Kalit olish → sunnatilla-designer.uz</Hyperlink>
+                    </TextBlock>
+                    <Button x:Name="CancelActivationButton" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,10,0,0"
+                            Content="Orqaga" Visibility="Collapsed" Click="CancelActivation_Click"/>
+                </StackPanel>
+            </ContentControl>
+        </StackPanel>
+    </ScrollViewer>
+    </Grid>
 </UserControl>

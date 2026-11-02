@@ -28,6 +28,9 @@ namespace ReklamaMaket.Core
         /// <summary>Dizayn chizilgach ChatGPT'ga avtomatik yuborish.</summary>
         [DataMember] public bool AutoSend { get; set; }
 
+        /// <summary>Litsenziya kaliti (shu kompyuterga bog'langan, shifrlash shart emas).</summary>
+        [DataMember] public string LicenseKey { get; set; }
+
         public static string Folder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ReklamaMaket");
 
         private static string FilePath => Path.Combine(Folder, "settings.json");

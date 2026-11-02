@@ -91,6 +91,7 @@ namespace ReklamaMaket
             SetupLists();
             LoadAiSettings();
             UpdatePhotoUi();
+            InitLicense();
 
             WriteLength(LogoHeightBox, 600);
             WriteLength(LogoWidthBox, 2000);
@@ -677,6 +678,8 @@ namespace ReklamaMaket
 
         private async void CreateButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!RequireLicense())
+                return;
             EnsureSynchronizationContext();
             bool drawn = RunCorelAction(() =>
             {
@@ -876,11 +879,13 @@ namespace ReklamaMaket
         {
             if (aiCancel != null)
                 return; // allaqachon ishlayapti
+            if (!RequireLicense())
+                return;
 
             string key = CurrentApiKey();
             if (string.IsNullOrEmpty(key))
             {
-                SetAiStatus("Avval OpenAI API kalitini kiriting va «Saqlash»ni bosing. Kalitni «Kalit olish →» havolasidan oling.", true);
+                SetAiStatus("Avval OpenAI API kalitini kiriting va «Saqlash»ni bosing. Kalitni «OpenAI kalit olish →» havolasidan oling.", true);
                 return;
             }
 

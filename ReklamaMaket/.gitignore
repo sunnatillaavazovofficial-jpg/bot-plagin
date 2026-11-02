@@ -3,3 +3,9 @@ obj/
 .vs/
 *.user
 CorelPath.local.props
+
+# Kalit generatorining maxfiy kaliti hech qachon repozitoriyga tushmasin
+maxfiy-kalit.json
+ReklamaMaket-KeyGen/
+berilgan-kalitlar.csv
+dist/

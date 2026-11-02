@@ -1,0 +1,20 @@
+Reklama Maket - CorelDRAW plagini
+https://sunnatilla-designer.uz/
+
+O'RNATISH
+1. CorelDRAW'ni yoping.
+2. install.bat ni ikki marta bosing.
+   - "Windows protected your PC" chiqsa: More info -> Run anyway.
+   - Ruxsat so'ralsa: Yes.
+   - Yashil "O'rnatildi" yozuvi chiqsa - tayyor.
+3. CorelDRAW'ni oching: Reklama -> Reklama Maket.
+
+FAOLLASHTIRISH
+4. Panelda "Kompyuter kodingiz"ni nusxalang ("Nusxa olish").
+5. Kodni sunnatilla-designer.uz orqali yuboring - sizga litsenziya kaliti beriladi.
+6. Kalitni panelga qo'yib, "Faollashtirish" ni bosing.
+   Kalit faqat shu kompyuterda ishlaydi.
+
+MUAMMOLAR
+- Menyu ko'rinmasa: CorelDRAW'ni F8 tugmasini bosib turgan holda oching.
+- O'chirish: cmd oynasida  install.bat -Uninstall
