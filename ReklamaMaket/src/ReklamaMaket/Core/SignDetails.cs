@@ -27,8 +27,10 @@ namespace ReklamaMaket.Core
     /// <summary>Panelda detallar shu guruhlarga bo'linadi.</summary>
     public enum DetailGroup
     {
+        /// <summary>"Harf" bo'limida ko'rinadi.</summary>
         Logo,
-        Light,
+
+        /// <summary>"Fon" bo'limida ko'rinadi.</summary>
         Background
     }
 
@@ -87,9 +89,9 @@ namespace ReklamaMaket.Core
                 "Kunduzgi rangi va diametri. Kechasi nur rangida yonadi."),
             new DetailInfo(Detail.FacePattern, DetailGroup.Logo, true, true, 2, DetailReset.Letter,
                 "Yuzdagi lazer naqsh elementi: kunduzgi rangi va kattaligi."),
-            new DetailInfo(Detail.Glow, DetailGroup.Light, false, true, 0, DetailReset.Never,
+            new DetailInfo(Detail.Glow, DetailGroup.Logo, false, true, 0, DetailReset.Never,
                 "Kechasi nur logo atrofiga qancha tarqaladi (kontrajur, yon nur)."),
-            new DetailInfo(Detail.BackgroundLight, DetailGroup.Light, true, false, 0, DetailReset.Never,
+            new DetailInfo(Detail.BackgroundLight, DetailGroup.Background, true, false, 0, DetailReset.Never,
                 "Fon orqasidagi LED nuri rangi (teshiklar va reykalar orasidan chiqadi)."),
             new DetailInfo(Detail.Frame, DetailGroup.Background, true, true, 0, DetailReset.Background,
                 "Fon ramkasi (profil) rangi va eni. 0 — ramkasiz."),
@@ -143,26 +145,26 @@ namespace ReklamaMaket.Core
         {
             switch (detail)
             {
-                case Detail.Trim: return s.Letter.Cut == CutMode.PushThrough ? "Akril qirrasi eni" : "Kant (bort qirrasi) eni";
-                case Detail.Standoff: return "Distansiya (fondan masofa)";
-                case Detail.Protrusion: return "Harf chiqib turishi";
+                case Detail.Trim: return s.Letter.Cut == CutMode.PushThrough ? "Akril qirrasi" : "Kant eni";
+                case Detail.Standoff: return "Devordan masofa";
+                case Detail.Protrusion: return "Chiqib turishi";
                 case Detail.Dots:
-                    return s.Letter.Face == FaceMaterial.Metal ? "Lampochkalar (diametri)"
-                        : s.Letter.Face == FaceMaterial.Perforated ? "Perforatsiya teshiklari (diametri)"
-                        : "LED nuqtalar (diametri)";
-                case Detail.FacePattern: return "Yuzdagi naqsh (kattaligi)";
+                    return s.Letter.Face == FaceMaterial.Metal ? "Lampochkalar"
+                        : s.Letter.Face == FaceMaterial.Perforated ? "Teshiklar"
+                        : "LED nuqtalar";
+                case Detail.FacePattern: return "Naqsh";
                 case Detail.Glow: return "Nur tarqalishi";
-                case Detail.BackgroundLight: return "Fon nuri rangi";
+                case Detail.BackgroundLight: return "Fon chirog'i";
                 case Detail.Frame:
-                    return s.Background.Kind == BackgroundKind.Lightbox ? "Laytboks profili (ramka)"
+                    return s.Background.Kind == BackgroundKind.Lightbox ? "Quti ramkasi"
                         : s.Background.Kind == BackgroundKind.WoodFrameMesh ? "Yog'och ramka" : "Ramka";
-                case Detail.Pattern: return "Gul o'lchami (qadami)";
+                case Detail.Pattern: return "Gul kattaligi";
                 case Detail.SlatWidth: return "Reyka eni";
-                case Detail.SlatGap: return "Reykalar oralig'i";
-                case Detail.Border: return "O'yilgan ramka chizig'i";
-                case Detail.BorderInset: return "Chiziq fon chetidan";
-                case Detail.Wall: return "Devor rangi (orqada)";
-                case Detail.Bolts: return "Distansiya boltlari";
+                case Detail.SlatGap: return "Reyka oralig'i";
+                case Detail.Border: return "O'yilgan chiziq";
+                case Detail.BorderInset: return "Chiziq chetdan";
+                case Detail.Wall: return "Devor rangi";
+                case Detail.Bolts: return "Boltlar";
                 default: return detail.ToString();
             }
         }

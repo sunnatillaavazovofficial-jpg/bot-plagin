@@ -4,25 +4,36 @@ Tanlangan logodan **hajmli harf (channel letters)** dizaynini Corelda chizadi: h
 fon dizayni alohida tanlanadi, o'lchamlar qo'yiladi. Kerak bo'lsa, tayyor dizaynni **ChatGPT**ga
 yuborib, uning kunduzgi va kechki **real ko'rinishini** oladi (har kim o'z API kalitini ulaydi).
 
+## Panel
+
+Panel oddiy: tepada **ko'rinish** (☀ Kunduzi / ☾ Kechasi, rasm tanlansa — 🏠 Joyida), ostida bo'limlar,
+pastda uchta tugma.
+
+| Bo'lim | Nima qilinadi |
+|---|---|
+| **Logo** | Corel'dan logoni olish, haqiqiy bo'yi va eni, birlik (mm / sm / m) |
+| **Harf** | harf turi, qalinligi, ranglar (oldi, yoni, chiroq) va qo'shimcha sozlamalar |
+| **Fon** | fon turi, gul, fonning qayeri yonadi, rangi, o'lchami va qo'shimcha sozlamalar |
+| **Joyida** | bino rasmini tanlash — logo shu rasm ustida turadi (sichqoncha bilan suriladi) |
+| **AI** (ChatGPT) | API kalit, kunduzi / kechasi, real rasm yaratish |
+
+Pastki tugmalar: **⚙** — chizma sozlamalari (masshtab, kechki ko'rinish, yon kesim, o'lchamlar, yangi sahifa),
+**Corel'da chizish**, **➤** — ChatGPT bilan real rasm.
+
 ## Ish tartibi
 
-1. Corelda logoni belgilang → panelda **Tanlangan logoni olish**.
+1. Corel'da logoni belgilang → **Logo** bo'limida **Corel'dan logoni olish**.
 2. Logoning haqiqiy **bo'yi**ni kiriting — eni proporsiya bo'yicha o'zi hisoblanadi.
-3. **Logo dizayni** (hajmli harf yoki fonga o'yilgan logo, qalinligi, ranglari) va **fon dizayni**ni tanlang.
-   Panel tepasida **Kunduzi / Kechasi** ko'rinishi darhol yangilanadi.
-   **Detallar** bo'limida kant, distansiya, LED nuqta, nur, ramka, gul, reyka va boshqa
-   detallarning rangi va o'lchamini alohida o'zgartirish mumkin.
-4. **CORELDA DIZAYN CHIZISH** — yangi sahifada quyidagilar chiziladi:
-   - kunduzgi ko'rinish (fon + harflar + soya);
-   - kechki ko'rinish (nima yonishi: yuz, kontrajur, yon tomon, LED nuqtalar...);
-   - yon kesim sxemasi (yuz, bort, orqa, LED, distansiya, qalinlik);
-   - o'lcham chiziqlari va sarlavha.
+3. **Harf** va **Fon** bo'limlarida dizaynni tanlang. Tepada ko'rinish darhol yangilanadi.
+4. Xohlasangiz, **Joyida** bo'limida bino rasmini tanlang va logoni rasmda kerakli joyga suring
+   (g'ildirak yoki «Kattaligi» bilan kattalashtiring).
+5. **Corel'da chizish** — yangi sahifada chiziladi:
+   - kunduzgi va kechki ko'rinish, yon kesim, o'lcham chiziqlari va sarlavha;
+   - bino rasmi tanlangan bo'lsa — **logo rasm ustida, kunduzi va kechasi** (kechasi rasm qorong'i, logo yonib turadi).
    Hammasi `Ctrl+Z` bilan bitta qadamda bekor qilinadi. Asl logo o'zgarmaydi.
-5. **CHATGPT: REAL KO'RINISH** — dizaynni ChatGPT'ga yuboradi. Plagin joy (bino fasadi) rasmini
-   tanlashni so'raydi: rasm berilsa, belgi shu fasadga qo'yiladi; berilmasa — umumiy fasadda
-   ko'rsatiladi. Natija (kunduzi + kechasi) Corelga qo'shiladi va
+6. **➤ ChatGPT** — real rasm (kunduzi + kechasi). Bino rasmi bo'lsa, ChatGPT logoni aynan siz qo'ygan joyda
+   va kattalikda real qilib chizadi; bo'lmasa — umumiy binoda ko'rsatadi. Natija Corel'ga qo'shiladi va
    `Hujjatlar\ReklamaMaket\ChatGPT\<sana>` papkasiga saqlanadi.
-   **"Dizayn chizilgach avtomatik yuborish"** belgilansa, 4-qadamdan keyin o'zi yuboradi.
 
 ## Qoidalar (ogohlantirish beriladi)
 
@@ -40,105 +51,109 @@ shunday yoziladi.
 
 ## Logo dizaynlari (21)
 
-Ro'yxat panelda ikki guruhga bo'lingan.
+Ro'yxat ikki guruhga bo'lingan. Nomi nima yonishini aytadi.
 
-### Hajmli harflar (channel letters) — 17
+### Hajmli harflar — 17
 
-| Nomi | English | Nima yonadi |
-|---|---|---|
-| Old tomoni yonadigan | Front-lit channel letters | yuz |
-| Qiya qirrali, old tomoni yonadi | Face-lit letters with bevel edge | yuz |
-| Oq yuz, qora bort | Black & white face-lit letters | yuz |
-| Yaxlit akril, yumaloq qirra | Solid acrylic letters, round edge, fully lit | yuz + yon |
-| Yaxlit rangli akril, to'g'ri qirra | Solid coloured acrylic letters, square edge, fully lit | yuz + yon |
-| Old + orqa yonadigan | Face & halo-lit letters | yuz + kontrajur |
-| Orqadan yonadigan (kontrajur) | Halo-lit (reverse channel) letters | kontrajur |
-| Yon tomoni qisman yonadi | Partial side-lit letters | yonda chiziq |
-| Old + yon qisman yonadi | Face & partial side-lit letters | yuz + yonda chiziq |
-| Yon tomoni to'liq yonadi | Side-lit letters (opaque face) | yon |
-| Hamma tomoni yonadi | Front & side fully lit letters | yuz + yon |
-| Ochiq LED (skelet) | Exposed LED (skeleton) letters | LED nuqtalar |
-| Lampochkali (marquee) | Marquee bulb letters | lampochkalar |
-| Perforatsiyali + cheti yonadi | Perforated pixel-LED letters with lit rim | piksellar + kontur |
-| Naqshli lazer kesma yuz | Laser-cut pattern face letters | naqsh |
-| Akril harf, yoritilmaydi | Non-illuminated acrylic letters on standoffs | — |
-| Metall harf, yoritilmaydi | Non-illuminated metal letters | — |
+| Nomi | English |
+|---|---|
+| Oldi yonadi | Front-lit channel letters |
+| Oldi yonadi, qirrasi qiya | Face-lit letters with bevel edge |
+| Oldi oq yonadi, yoni qora | Black & white face-lit letters |
+| Butun akril, hammasi yonadi | Solid acrylic letters, round edge, fully lit |
+| Rangli akril, hammasi yonadi | Solid coloured acrylic letters, square edge, fully lit |
+| Oldi va orqasi yonadi | Face & halo-lit letters |
+| Orqasi yonadi (kontrajur) | Halo-lit (reverse channel) letters |
+| Yonida chiziq yonadi | Partial side-lit letters |
+| Oldi va yonida chiziq yonadi | Face & partial side-lit letters |
+| Faqat yoni yonadi | Side-lit letters (opaque face) |
+| Oldi va yoni yonadi | Front & side fully lit letters |
+| Ochiq LED nuqtalar | Exposed LED (skeleton) letters |
+| Lampochkali | Marquee bulb letters |
+| Piksel LED, cheti yonadi | Perforated pixel-LED letters with lit rim |
+| Naqshli yuz (lazer) | Laser-cut pattern face letters |
+| Akril harf, yonmaydi | Non-illuminated acrylic letters on standoffs |
+| Metall harf, yonmaydi | Non-illuminated metal letters |
 
-### Fonga o'yilgan logo (alyukobond) — 4
+### Fonga o'yilgan logo — 4
 
 Logo alohida harf emas: alyukobond yuzga o'yib chiqariladi yoki o'yib yoziladi.
 
-| Nomi | English | Qanday yasaladi |
-|---|---|---|
-| O'yib chiqarilgan + akril, yonadi | Routed (cut-out) face with flush acrylic, backlit | o'yiqqa yuz bilan bir tekis akril, ichidan LED — faqat logo yonadi |
-| Push-through: akril harf chiqib turadi | Push-through acrylic letters | qalin akril harf o'yiqdan chiqib turadi, yuzi plyonkali, qirralari yonadi |
-| O'yib chiqarilgan, orqasida rangli panel | Routed face over a contrasting backing panel | ikki qatlam: o'yiqdan orqadagi boshqa rangli panel ko'rinadi, yonmaydi |
-| Gravirovka (o'yib yozilgan) | Engraved (V-groove) logo | frezer bilan o'yib yoziladi, o'yiqda kumush alyuminiy ko'rinadi |
+| Nomi | Qanday yasaladi |
+|---|---|
+| O'yilgan, akril yonadi | o'yiqqa yuz bilan bir tekis akril, ichidan LED — faqat logo yonadi |
+| O'yilgan, akril harf chiqib turadi | qalin akril harf o'yiqdan chiqib turadi, yuzi plyonkali, qirralari yonadi |
+| O'yilgan, orqasida rangli list | ikki qatlam: o'yiqdan orqadagi boshqa rangli list ko'rinadi |
+| Gravirovka, yonmaydi | frezer bilan o'yib yoziladi, o'yiqda kumush alyuminiy ko'rinadi |
 
 O'yilgan logo tanlanganda fon alyukobond bo'lmasa, panel uni o'zi almashtiradi: yonadigan turga —
-**Alyukobond quti**, yonmaydigan turga — **Kompozit panel**. Ranglar va qalinlik nomlari ham turga mos
-o'zgaradi (masalan: *Akril*, *Plyonka / Qirra*, *Orqa panel*, *O'yiq chuqurligi*). Yonish qoidasi
-(4 sm) bu turlarda harf qalinligiga emas, **quti (fon) qalinligiga** qo'llanadi. Push-through logo 20 sm
-dan past bo'lsa, chiqib turmaydi — yassi o'yiq bo'lib chiziladi.
+**Alyukobond quti**, yonmaydigan turga — **Kompozit panel**. Rang va qalinlik nomlari turga mos o'zgaradi.
+Yonish qoidasi (4 sm) bu turlarda **quti (fon) qalinligiga** qo'llanadi. Chiqib turadigan akril harf 20 sm
+dan past bo'lsa — yassi o'yiq bo'lib chiziladi.
 
 ## Fon dizaynlari (11)
 
 | Nomi | Izoh |
 |---|---|
-| Fonsiz (to'g'ridan-to'g'ri devorga) | harflar devorda |
-| Kompozit panel (ACP) | tekis panel |
-| Kasseta (bortli panel) | chetlari bukilgan panel |
-| Laytboks fon (yoritiladigan) | butun yuzi yonadi |
-| Akril plita (distansiyada) | shaffof plita, boltlarda |
-| Alyukobond quti (yuzi o'yiladi) | yuzi yonmaydigan quti, ichida LED — o'yilgan logo uchun |
-| Gulli temir list (perforatsiya) | 30 xil gul, orqasiga LED qo'yish mumkin |
-| Ramkadagi setka (temir ramka) | profil quvur ramka + setka, oraliq ustunlar |
-| Yog'och ramkali setka (orqadan yonadi) | yog'och ramka, setka, chetlari bo'ylab nur |
-| Gorizontal temir reykalar (lamel) | kronshteyndagi reykalar, oralig'idan devor ko'rinadi |
-| Vertikal reykali panel | qovurg'ali fasad qoplamasi |
+| Fonsiz, devorga | harflar devorda |
+| Kompozit panel | tekis panel |
+| Kasseta (qalin panel) | chetlari bukilgan panel |
+| Yonadigan quti (laytboks) | butun yuzi yonadi |
+| Akril list, boltlarda | shaffof list, devordan boltlarda |
+| Alyukobond quti, logo o'yiladi | yuzi yonmaydigan quti, ichida LED — o'yilgan logo uchun |
+| Gulli temir list | 30 xil gul, orqasiga LED qo'yish mumkin |
+| Setka, temir ramkada | profil quvur ramka + setka, oraliq ustunlar |
+| Setka, yog'och ramkada | yog'och ramka, setka, chetlari bo'ylab nur |
+| Gorizontal reykalar | kronshteyndagi reykalar, oralig'idan devor ko'rinadi |
+| Vertikal reykalar | qovurg'ali fasad qoplamasi |
 
-**Chetida o'yilgan ramka chizig'i (gravirovka)** — alyukobond fonlarda (panel, kasseta, laytboks,
-alyukobond quti) yuz chetidan ichkarida ingichka o'yilgan chiziq qo'shiladi.
+**Chetida o'yilgan chiziq** — alyukobond fonlarda (panel, kasseta, laytboks, alyukobond quti) yuz chetidan
+ichkarida ingichka o'yilgan chiziq.
 
-**Gullar (30 ta)** — gulli list va setkalar uchun: olti burchakli setka (5 xil qalinlik), dumaloq teshik (5),
-xochsimon teshik (4), kvadrat teshik va kvadrat setka (3), uzunchoq tirqish (4), romb setka / prosechka (9).
-Panelda har bir gul kichik rasmi bilan tanlanadi.
+**Gullar (30 ta)** — olti burchakli setka (5), dumaloq teshik (5), xochsimon teshik (4), kvadrat (3),
+uzunchoq tirqish (4), romb setka / prosechka (9). Har bir gul kichik rasmi bilan tanlanadi.
 
-**Fon yoritilishi (qaysi joyi yonadi)** — gulli, setkali va reykali fonlar uchun: yonmaydi, butunlay yonadi,
-chetlari bo'ylab yonadi, logo atrofi yonadi, pastdan yonadi. Nur teshiklar (yoki reykalar oralig'i) orqali
-chiqadi; kechki ko'rinishda yorug'lik darajasi bo'yicha chiziladi. Fon qalinligi 4 sm dan kam bo'lsa —
-yoritib bo'lmaydi (ogohlantirish beriladi).
+**Fonning qayeri yonadi** — gulli, setkali va reykali fonlar uchun: yonmaydi, butunlay, chetlari bo'ylab,
+logo atrofi, pastdan. Fon qalinligi 4 sm dan kam bo'lsa — yoritib bo'lmaydi (ogohlantirish beriladi).
 
-## Detallar: rang va o'lcham
+## Qo'shimcha sozlamalar (rang va o'lcham)
 
-Asosiy ranglar va o'lchamlar o'z bo'limlarida o'zgartiriladi: logo (bo'yi, eni, qalinligi, yuz / bort / nur rangi)
-va fon (rangi, eni, bo'yi, chetdan joy, qalinligi). **Detallar** bo'limida esa tanlangan dizaynda bor bo'lgan
-qismlar chiqadi. Maydon bo'sh qolsa, dizaynning o'z qiymati olinadi (kulrang "avto: ..." yozuvi).
-**↺** tugmasi asl qiymatga qaytaradi.
+**Harf** va **Fon** bo'limlarining pastida «Qo'shimcha» ostida faqat tanlangan dizaynda bor detallar chiqadi.
+Maydon bo'sh qolsa, dizaynning o'z qiymati olinadi (kulrang «avto: ...» yozuvi); ↺ — asl qiymatga qaytarish.
 
-| Detal | Rang | O'lcham | Qaysi dizaynda |
+| Detal | Rang | O'lcham | Qayerda |
 |---|---|---|---|
-| Kant (bort qirrasi) | — (bort rangi) | eni, 0 — kantsiz | hajmli harflar, push-through qirrasi |
-| Distansiya | — | harf va fon orasidagi masofa | distansiyadagi harflar (kontrajur, akril) |
-| Harf chiqib turishi | — | mm (akril qalinligidan oshmaydi) | push-through |
-| LED nuqtalar / lampochkalar / perforatsiya | kunduzgi rangi | diametri (oraliq shunga mos) | ochiq LED, lampochkali, perforatsiyali |
-| Yuzdagi naqsh | kunduzgi rangi | element kattaligi | naqshli lazer kesma |
-| Nur tarqalishi | — | mm | yonadigan harflar |
-| Fon nuri rangi | ✓ | — | gulli list, setka, reykalar |
-| Ramka / laytboks profili | ✓ | eni, 0 — ramkasiz | laytboks, gulli list, setkalar |
-| Gul o'lchami | — | qadami (markazdan markazga) | gulli list, setkalar |
-| Reyka eni va oralig'i | — | ✓ | reykali fonlar |
-| O'yilgan ramka chizig'i | ✓ | eni va chetdan masofasi | alyukobond fonlar, belgilansa |
-| Devor rangi (orqada) | ✓ | — | reykalar oralig'i, gul teshiklari |
-| Distansiya boltlari | ✓ | diametri | akril plita |
+| Kant eni / akril qirrasi | — (yoni rangi) | eni, 0 — kantsiz | Harf |
+| Devordan masofa | — | harf va fon orasi | Harf (distansiyadagi harflar) |
+| Chiqib turishi | — | akril qalinligidan oshmaydi | Harf (chiqib turadigan akril) |
+| LED nuqtalar / lampochkalar / teshiklar | kunduzgi rangi | diametri | Harf |
+| Naqsh | kunduzgi rangi | kattaligi | Harf (naqshli yuz) |
+| Nur tarqalishi | — | mm | Harf (yonadiganlar) |
+| Fon chirog'i | ✓ | — | Fon (gulli, setka, reyka) |
+| Ramka / quti ramkasi | ✓ | eni, 0 — ramkasiz | Fon (laytboks, gulli, setkalar) |
+| Gul kattaligi | — | qadami | Fon (gulli, setkalar) |
+| Reyka eni va oralig'i | — | ✓ | Fon (reykalar) |
+| O'yilgan chiziq | ✓ | eni va chetdan masofasi | Fon (belgilansa) |
+| Devor rangi | ✓ | — | Fon (reyka oralig'i, gul teshiklari) |
+| Boltlar | ✓ | diametri | Fon (akril list) |
 
-Harf yoki fon turi almashtirilganda shu turga xos detallar (kant, ramka, gul, reyka...) yangi turning o'z
-qiymatiga qaytadi. Barcha detallar Corel chizmasida, paneldagi ko'rinishda va ChatGPT so'rovida bir xil ishlatiladi.
+## Joyida — logo bino rasmi ustida
+
+**Joyida** bo'limida bino (fasad) rasmini tanlang (JPG yoki PNG). Ko'rinish rasm ustiga o'tadi:
+logoni sichqoncha bilan kerakli joyga suring, g'ildirak yoki «Kattaligi» bilan kattalashtiring.
+Logo rasmdan chiqib ketmaydi.
+
+- **Ikki holat:** ☀ kunduzi — oddiy rasm; ☾ kechasi — rasm qoraytiriladi, logo yonib turadi.
+- **Corel'da:** «Corel'da ham chizish» yoqilgan bo'lsa, asosiy chizma ostida **JOYIDA — KUNDUZI** va
+  **JOYIDA — KECHASI** chiziladi (rasm + shu joydagi logo). «Fonsiz, devorga» turida devor chizilmaydi —
+  rasmdagi devor ko'rinadi.
+- **ChatGPT'da:** shu ikki rasm yuboriladi va ChatGPT logoni aynan shu joyda, shu kattalikda real (3D)
+  qilib chizadi — bino va atrof o'zgarmaydi.
 
 ## ChatGPT'ni ulash
 
 1. [platform.openai.com/api-keys](https://platform.openai.com/api-keys) sahifasida API kalit yarating
-   (panelda **API kalit olish →** havolasi shu sahifani ochadi).
+   (panelda **Kalit olish →** havolasi shu sahifani ochadi).
 2. OpenAI hisobingizda **Billing** (to'lov) yoqilgan bo'lishi kerak — har bir rasm uchun sizning hisobingizdan
    to'lanadi. Rasm modellari uchun ba'zan tashkilotni tasdiqlash
    ([Organization verification](https://platform.openai.com/settings/organization/general)) ham so'raladi.
@@ -149,12 +164,12 @@ ChatGPT'ga dizayn rasmi bilan birga **plagin dizayni tavsifi** ham yuboriladi: r
 (plagin chizgan texnik old ko'rinish, haqiqiy rang va proporsiya), harf turi va materiallari, ranglar
 (nomi va hex kodi), qalinlik, logo o'lchami va joylashuvi, fon turi, gul, ramka, fon o'lchami,
 qaysi joyi yonishi va qat'iy talablar (logoni o'zgartirmaslik, ortiqcha narsa qo'shmaslik).
-Panelda **"Yuboriladigan to'liq so'rovni ko'rish"** bo'limida matnning o'zini ko'rish mumkin.
+Matnning o'zini **AI → Qo'shimcha → Yuboriladigan to'liq matn** bo'limida ko'rish mumkin.
 
 Standart model — `gpt-image-2`; ro'yxatda `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`,
-`chatgpt-image-latest` ham bor, yangi model nomini qo'lda yozish mumkin. **So'rov (prompt)** maydonini
-o'zgartirsangiz saqlanib qoladi; **Standart** tugmasi asl matnni qaytaradi. Harf/fon turi, o'lcham,
-qoidalar va kunduzi/kechasi so'rovga avtomatik qo'shiladi.
+`chatgpt-image-latest` ham bor, yangi model nomini qo'lda yozish mumkin (**Qo'shimcha** ichida).
+**Topshiriq matni**ni o'zgartirsangiz saqlanib qoladi; **Asl holi** tugmasi asl matnni qaytaradi.
+Harf/fon turi, o'lcham, qoidalar, joy rasmi va kunduzi/kechasi so'rovga avtomatik qo'shiladi.
 
 ## O'rnatish
 
@@ -177,12 +192,14 @@ ReklamaMaket/
 └── src/ReklamaMaket/
     ├── AppUI.xslt, UserUI.xslt     Corel paneli, menyu va tugma
     ├── DockerUI.xaml(.cs)          panel
+    ├── DockerUI.Photo.cs           "Joyida": bino rasmi, logoni surish
     ├── Styles/Theme.xaml           panel ranglari va uslublari
     ├── Designs/LetterStyle.cs      logo dizaynlari ro'yxati (hajmli harflar + o'yilgan logo)
     ├── Designs/BackgroundStyle.cs  fon dizaynlari ro'yxati
     ├── Designs/PatternStyle.cs     gullar (perforatsiya, setka) ro'yxati
-    ├── DockerUI.Details.cs         "Detallar" bo'limi (rang va o'lcham)
-    ├── Core/                       sozlamalar, qoidalar (SignRules), detallar (SignDetails), logo olish/eksport
+    ├── DockerUI.Details.cs         "Qo'shimcha" sozlamalar (rang va o'lcham)
+    ├── Core/                       sozlamalar, qoidalar (SignRules), detallar (SignDetails),
+    │                               rasm ustida joylash (PhotoLayout), logo olish/eksport
     ├── Rendering/                  Corelda chizish va paneldagi ko'rinish
     └── Ai/                         ChatGPT (OpenAI Images API) va so'rov matni
 ```

@@ -8,8 +8,9 @@ using ReklamaMaket.Core;
 namespace ReklamaMaket
 {
     /// <summary>
-    /// "Detallar" bo'limi: kant, distansiya, LED nuqta, nur, ramka, gul, reyka, gravirovka chizig'i, devor, boltlar —
-    /// rangi va o'lchami. Ro'yxat tanlangan harf va fonga qarab quriladi; bo'sh qoldirilgani dizaynning o'z qiymatini oladi.
+    /// "Qo'shimcha" sozlamalar (detallar): kant, devordan masofa, LED nuqta, nur, ramka, gul, reyka, o'yilgan chiziq,
+    /// devor, boltlar — rangi va o'lchami. Ro'yxat tanlangan harf va fonga qarab quriladi; bo'sh qoldirilgani
+    /// dizaynning o'z qiymatini oladi.
     /// </summary>
     public partial class DockerUI
     {
@@ -65,66 +66,51 @@ namespace ReklamaMaket
             UpdateDetailRows(s);
         }
 
+        /// <summary>Harf detallari "Harf" bo'limiga, fon detallari "Fon" bo'limiga ("Qo'shimcha" ostiga) chiqadi.</summary>
         private void BuildDetailRows(SignSettings s, List<DetailInfo> applicable)
         {
-            DetailsPanel.Children.Clear();
+            LetterDetailsPanel.Children.Clear();
+            BackgroundDetailsPanel.Children.Clear();
             detailRows.Clear();
 
-            if (applicable.Count == 0)
+            foreach (DetailInfo info in applicable)
             {
-                DetailsPanel.Children.Add(new TextBlock
-                {
-                    Style = (Style)FindResource("Hint"),
-                    Text = "Bu dizaynda alohida detal yo'q — ranglar va o'lchamlar yuqoridagi bo'limlarda."
-                });
-                return;
+                Panel target = info.Group == DetailGroup.Logo ? LetterDetailsPanel : BackgroundDetailsPanel;
+                target.Children.Add(CreateDetailRow(s, info));
             }
-
-            foreach (IGrouping<DetailGroup, DetailInfo> group in applicable.GroupBy(d => d.Group))
-            {
-                DetailsPanel.Children.Add(new TextBlock
-                {
-                    Text = GroupTitle(group.Key),
-                    FontWeight = FontWeights.Bold,
-                    FontSize = 10.5,
-                    Foreground = (Brush)FindResource("AccentBrush"),
-                    Margin = new Thickness(0, DetailsPanel.Children.Count == 0 ? 0 : 6, 0, 0)
-                });
-                foreach (DetailInfo info in group)
-                    DetailsPanel.Children.Add(CreateDetailRow(s, info));
-            }
-        }
-
-        private static string GroupTitle(DetailGroup group)
-        {
-            switch (group)
-            {
-                case DetailGroup.Logo: return "LOGO";
-                case DetailGroup.Light: return "NUR (CHIROQ)";
-                default: return "FON";
-            }
+            LetterDetailsHeader.Visibility = LetterDetailsPanel.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            BackgroundDetailsHeader.Visibility = BackgroundDetailsPanel.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private UIElement CreateDetailRow(SignSettings s, DetailInfo info)
         {
             var row = new DetailRow { Info = info };
-            var panel = new StackPanel { Margin = new Thickness(0, 2, 0, 2), ToolTip = info.Hint };
+            var panel = new StackPanel { Margin = new Thickness(0, 2, 0, 4), ToolTip = info.Hint };
             panel.Children.Add(new TextBlock { Style = (Style)FindResource("FieldLabel"), Text = SignDetails.Title(s, info.Key) });
 
+            // Rang | hex | o'lcham | birlik | ↺
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = info.HasColor ? (info.HasSize ? new GridLength(78) : new GridLength(1, GridUnitType.Star)) : new GridLength(0) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = info.HasColor ? (info.HasSize ? new GridLength(86) : new GridLength(1, GridUnitType.Star)) : new GridLength(0) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = info.HasSize ? new GridLength(1, GridUnitType.Star) : new GridLength(0) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             if (info.HasColor)
             {
-                row.Swatch = new Button { Style = (Style)FindResource("Swatch"), Width = 28, Margin = new Thickness(0, 2, 6, 2), Tag = row, ToolTip = "Rang tanlash" };
+                row.Swatch = new Button
+                {
+                    Style = (Style)FindResource("Swatch"),
+                    Width = 32,
+                    Height = 32,
+                    Margin = new Thickness(0, 3, 6, 3),
+                    Tag = row,
+                    ToolTip = "Rang tanlash"
+                };
                 row.Swatch.Click += DetailSwatch_Click;
                 grid.Children.Add(row.Swatch);
 
-                row.Hex = new TextBox { Tag = row, HorizontalContentAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, info.HasSize ? 6 : 0, 0) };
+                row.Hex = new TextBox { Tag = row, Margin = new Thickness(0, 3, info.HasSize ? 6 : 0, 3) };
                 row.Hex.TextChanged += DetailHex_TextChanged;
                 Grid.SetColumn(row.Hex, 1);
                 grid.Children.Add(row.Hex);
@@ -140,7 +126,7 @@ namespace ReklamaMaket
                 row.Placeholder = new TextBlock
                 {
                     Style = (Style)FindResource("Hint"),
-                    Margin = new Thickness(6, 0, 0, 0),
+                    Margin = new Thickness(10, 0, 0, 0),
                     VerticalAlignment = VerticalAlignment.Center,
                     IsHitTestVisible = false
                 };
@@ -149,18 +135,17 @@ namespace ReklamaMaket
                 Grid.SetColumn(sizeHost, 2);
                 grid.Children.Add(sizeHost);
 
-                row.Unit = new TextBlock { Style = (Style)FindResource("Hint"), Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+                row.Unit = new TextBlock { Style = (Style)FindResource("Unit") };
                 Grid.SetColumn(row.Unit, 3);
                 grid.Children.Add(row.Unit);
             }
 
             row.Reset = new Button
             {
-                Style = (Style)FindResource("SecondaryButton"),
-                Content = "↺",
-                Padding = new Thickness(6, 1, 6, 1),
-                Margin = new Thickness(4, 0, 0, 0),
-                ToolTip = "Dizaynning o'z qiymatiga qaytarish",
+                Style = (Style)FindResource("SmallRoundButton"),
+                Content = "\uE7A7",
+                Margin = new Thickness(6, 0, 0, 0),
+                ToolTip = "Asl qiymatga qaytarish",
                 Tag = row
             };
             row.Reset.Click += DetailReset_Click;

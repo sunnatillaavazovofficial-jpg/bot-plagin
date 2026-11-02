@@ -90,6 +90,7 @@ namespace ReklamaMaket
             ApiKeyLink.NavigateUri = new Uri(OpenAiImageClient.ApiKeysUrl);
             SetupLists();
             LoadAiSettings();
+            UpdatePhotoUi();
 
             WriteLength(LogoHeightBox, 600);
             WriteLength(LogoWidthBox, 2000);
@@ -107,7 +108,7 @@ namespace ReklamaMaket
             if (corelApp == null)
                 SetStatus("CorelDRAW bilan bog'lanib bo'lmadi (VGCore).", true);
             else
-                SetStatus("Corelda logoni belgilang va \"Tanlangan logoni olish\" tugmasini bosing.", false);
+                SetStatus("Corel'da logoni belgilang va «Corel'dan logoni olish» tugmasini bosing.", false);
         }
 
         private TextBox[] LengthBoxes => new[]
@@ -124,9 +125,6 @@ namespace ReklamaMaket
             letters.GroupDescriptions.Add(new PropertyGroupDescription(nameof(LetterStyle.Group)));
             LetterCombo.ItemsSource = letters;
             BackgroundCombo.ItemsSource = BackgroundStyles.All;
-
-            UnitCombo.ItemsSource = LengthUnit.All;
-            UnitCombo.SelectedItem = unit;
 
             ScaleCombo.ItemsSource = new[] { 1, 5, 10, 20, 50, 100 };
             ScaleCombo.SelectedItem = 10;
@@ -178,7 +176,7 @@ namespace ReklamaMaket
             try
             {
                 WriteLength(DepthBox, style.DefaultDepth);
-                LetterDescription.Text = style.Description + (style.Illuminated ? string.Empty : " Yoritilmaydi.");
+                LetterCombo.ToolTip = style.Description;
                 DepthLabel.Text = style.DepthLabel;
                 FaceColorLabel.Text = style.FaceColorLabel;
                 ReturnColorLabel.Text = style.ReturnColorLabel;
@@ -222,7 +220,7 @@ namespace ReklamaMaket
             try
             {
                 WriteLength(BackgroundDepthBox, style.DefaultDepth);
-                BackgroundDescription.Text = style.Description;
+                BackgroundCombo.ToolTip = style.Description;
                 PatternPanel.Visibility = style.HasPattern ? Visibility.Visible : Visibility.Collapsed;
                 LightingPanel.Visibility = style.SupportsLighting ? Visibility.Visible : Visibility.Collapsed;
                 EngravedBorderCheck.Visibility = style.CanHaveBorder ? Visibility.Visible : Visibility.Collapsed;
@@ -256,7 +254,7 @@ namespace ReklamaMaket
             if (!ReadLength(LogoHeightBox, "Logo bo'yi", 10, out double logoHeight, out error) ||
                 !ReadLength(LogoWidthBox, "Logo eni", 10, out double logoWidth, out error) ||
                 !ReadLength(DepthBox, "Qalinligi", 1, out double depth, out error) ||
-                !ReadLength(MarginBox, "Chetdan joy", 0, out double margin, out error) ||
+                !ReadLength(MarginBox, "Logo atrofidagi joy", 0, out double margin, out error) ||
                 !ReadLength(BackgroundDepthBox, "Fon qalinligi", 0, out double backgroundDepth, out error))
             {
                 return null;
@@ -302,7 +300,13 @@ namespace ReklamaMaket
                 DrawNight = NightCheck.IsChecked == true,
                 DrawSection = SectionCheck.IsChecked == true,
                 DrawDimensions = DimensionsCheck.IsChecked == true,
-                NewPage = NewPageCheck.IsChecked == true
+                NewPage = NewPageCheck.IsChecked == true,
+                PhotoPath = photoBitmap != null ? photoPath : null,
+                PhotoAspect = photoBitmap != null ? photoAspect : 0,
+                PhotoX = photoX,
+                PhotoY = photoY,
+                PhotoSignWidth = PhotoSizeSlider.Value / 100,
+                DrawOnPhoto = PhotoDrawCheck.IsChecked == true
             };
         }
 
@@ -364,24 +368,34 @@ namespace ReklamaMaket
             RuleResult rules = SignRules.Check(settings);
             bool night = NightRadio.IsChecked == true;
             SyncDetails(settings);
+            photoPreview = null;
             try
             {
-                PreviewBox.Child = PreviewBuilder.Build(settings, rules, logo, night);
+                if (PhotoMode)
+                {
+                    // Bino rasmi ustida: belgini sichqoncha bilan surish mumkin
+                    photoPreview = PreviewBuilder.BuildOnPhoto(settings, rules, logo, night, photoBitmap);
+                    photoPreviewSettings = settings;
+                    PreviewBox.Child = photoPreview.Root;
+                }
+                else
+                {
+                    PreviewBox.Child = PreviewBuilder.Build(settings, rules, logo, night);
+                }
             }
             catch (Exception ex)
             {
                 SetStatus("Ko'rinishni chizishda xato: " + ex.Message, true);
             }
-            PreviewHost.Background = (Brush)FindResource(night ? "NightBrush" : "CheckerBrush");
+            PreviewHost.Background = (Brush)FindResource(night ? "NightBrush" : PhotoMode ? "ChipBrush" : "CheckerBrush");
 
             SignLayout layout = LogoLayout.Compute(settings);
-            SizeInfoText.Text = string.Format("Logo {0} × {1} mm · fon {2} × {3} mm · qalinligi {4} mm",
+            SizeInfoText.Text = string.Format("Logo {0}×{1} · Fon {2}×{3} mm",
                 Num.Format(Math.Round(settings.LogoWidth)), Num.Format(Math.Round(settings.LogoHeight)),
-                Num.Format(Math.Round(layout.BackgroundWidth)), Num.Format(Math.Round(layout.BackgroundHeight)),
-                Num.Format(settings.Depth));
+                Num.Format(Math.Round(layout.BackgroundWidth)), Num.Format(Math.Round(layout.BackgroundHeight)));
 
             WarningBox.Visibility = rules.HasWarnings ? Visibility.Visible : Visibility.Collapsed;
-            WarningText.Text = string.Join("\n", rules.Warnings.Select(w => "⚠ " + w));
+            WarningText.Text = string.Join("\n", rules.Warnings);
 
             UpdateFullPrompt(settings, rules);
 
@@ -399,9 +413,13 @@ namespace ReklamaMaket
         /// <summary>ChatGPT'ga ketadigan to'liq so'rov (panelda ko'rish uchun).</summary>
         private void UpdateFullPrompt(SignSettings settings, RuleResult rules)
         {
-            bool nightReference = SourceLastRadio.IsChecked == true && settings.DrawNight;
-            string day = PromptBuilder.Build(settings, rules, PromptBox.Text, false, false, photoPath != null);
-            string night = PromptBuilder.Build(settings, rules, PromptBox.Text, true, nightReference, photoPath != null);
+            bool fromDrawing = SendSelectionCheck.IsChecked != true;
+            bool nightReference = fromDrawing && settings.DrawNight;
+            LocationMode location = !settings.HasPhoto ? LocationMode.None
+                : fromDrawing && settings.DrawOnPhoto ? LocationMode.Composite
+                : LocationMode.Photo;
+            string day = PromptBuilder.Build(settings, rules, PromptBox.Text, false, false, location);
+            string night = PromptBuilder.Build(settings, rules, PromptBox.Text, true, nightReference, location);
             FullPromptBox.Text = "— KUNDUZI —\n" + day + "\n\n— KECHASI —\n" + night;
         }
 
@@ -409,6 +427,33 @@ namespace ReklamaMaket
         {
             foreach (TextBlock label in new[] { LogoHeightUnit, LogoWidthUnit, DepthUnit, BackgroundWidthUnit, BackgroundHeightUnit, MarginUnit, BackgroundDepthUnit })
                 label.Text = unit.Name;
+        }
+
+        // ================================================================ bo'limlar va pastki panel
+
+        private void Tab_Checked(object sender, RoutedEventArgs e)
+        {
+            if (LogoPage == null)
+                return; // panel hali yaratilmoqda
+
+            LogoPage.Visibility = TabLogo.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            LetterPage.Visibility = TabLetter.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            BackgroundPage.Visibility = TabBackground.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            PhotoPage.Visibility = TabPhoto.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            AiPage.Visibility = TabAi.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
+            // "Joyida" bo'limiga o'tilganda ko'rinish ham rasm ustiga o'tadi
+            if (sender == TabPhoto && photoBitmap != null)
+                PhotoViewToggle.IsChecked = true;
+        }
+
+        private void SettingsButton_Click(object sender, RoutedEventArgs e) => SettingsPopup.IsOpen = true;
+
+        private async void AiQuickButton_Click(object sender, RoutedEventArgs e)
+        {
+            EnsureSynchronizationContext();
+            TabAi.IsChecked = true;
+            await GenerateAsync();
         }
 
         private void UpdateColorControls()
@@ -495,9 +540,12 @@ namespace ReklamaMaket
             ScheduleRefresh();
         }
 
-        private void UnitCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void Unit_Checked(object sender, RoutedEventArgs e)
         {
-            if (suppressEvents || !(UnitCombo.SelectedItem is LengthUnit newUnit) || newUnit == unit)
+            LengthUnit newUnit = sender == UnitCmRadio ? LengthUnit.Centimeter
+                : sender == UnitMRadio ? LengthUnit.Meter
+                : LengthUnit.Millimeter;
+            if (suppressEvents || newUnit == unit)
                 return;
 
             LengthUnit oldUnit = unit;
@@ -622,7 +670,7 @@ namespace ReklamaMaket
             RunCorelAction(() =>
             {
                 CaptureLogo();
-                SetStatus("Logo olindi. Endi harf va fon dizaynini tanlang.", false);
+                SetStatus("Logo olindi. Endi «Harf» va «Fon» bo'limlarida dizaynni tanlang.", false);
                 return true;
             });
         }
@@ -636,7 +684,7 @@ namespace ReklamaMaket
                 if (logo == null)
                 {
                     if (!corelService.HasSelection())
-                        throw new UserException("Avval Corelda logoni belgilang va \"Tanlangan logoni olish\" tugmasini bosing.");
+                        throw new UserException("Avval Corel'da logoni belgilang va «Corel'dan logoni olish» tugmasini bosing.");
                     CaptureLogo();
                 }
 
@@ -658,7 +706,7 @@ namespace ReklamaMaket
             });
 
             if (drawn && AutoSendCheck.IsChecked == true)
-                await GenerateAsync(true);
+                await GenerateAsync();
         }
 
         private void CaptureLogo()
@@ -666,7 +714,7 @@ namespace ReklamaMaket
             logo = corelService.CaptureSelection();
             logoAspect = logo.WidthMm / logo.HeightMm;
             LogoImage.Source = logo.Preview;
-            LogoInfoText.Text = string.Format("{0} ta obyekt\nCorelda: {1} × {2} mm",
+            LogoInfoText.Text = string.Format("Logo olindi\n{0} ta obyekt · {1}×{2} mm",
                 logo.Count, Num.Format(Math.Round(logo.WidthMm, 1)), Num.Format(Math.Round(logo.HeightMm, 1)));
 
             // Bo'yi saqlanadi, eni logo proporsiyasi bo'yicha hisoblanadi
@@ -804,45 +852,12 @@ namespace ReklamaMaket
             e.Handled = true;
         }
 
-        private void PickPhotoButton_Click(object sender, RoutedEventArgs e) => PickPhoto();
-
-        private void ClearPhotoButton_Click(object sender, RoutedEventArgs e)
-        {
-            photoPath = null;
-            PhotoText.Text = "tanlanmagan";
-            PhotoText.ToolTip = null;
-            ScheduleRefresh();
-        }
-
-        private bool PickPhoto()
-        {
-            var dialog = new Microsoft.Win32.OpenFileDialog
-            {
-                Title = "Joy rasmi (bino fasadi)",
-                Filter = "Rasmlar (*.jpg;*.jpeg;*.png;*.webp)|*.jpg;*.jpeg;*.png;*.webp"
-            };
-            if (dialog.ShowDialog() != true)
-                return false;
-
-            if (new FileInfo(dialog.FileName).Length > MaxPhotoBytes)
-            {
-                SetAiStatus("Rasm 45 MB dan katta — kichikroq rasm tanlang.", true);
-                return false;
-            }
-
-            photoPath = dialog.FileName;
-            PhotoText.Text = Path.GetFileName(photoPath);
-            PhotoText.ToolTip = photoPath;
-            ScheduleRefresh();
-            return true;
-        }
-
         private void ResetPromptButton_Click(object sender, RoutedEventArgs e) => PromptBox.Text = PromptBuilder.DefaultPrompt;
 
         private async void GenerateButton_Click(object sender, RoutedEventArgs e)
         {
             EnsureSynchronizationContext();
-            await GenerateAsync(false);
+            await GenerateAsync();
         }
 
         private void CancelAiButton_Click(object sender, RoutedEventArgs e) => aiCancel?.Cancel();
@@ -857,7 +872,7 @@ namespace ReklamaMaket
         /// Dizaynni Corel'dan PNG qilib oladi va ChatGPT'ga yuboradi: kunduzgi va kechki real ko'rinish.
         /// Natija papkaga saqlanadi va Corelga import qilinadi.
         /// </summary>
-        private async Task GenerateAsync(bool automatic)
+        private async Task GenerateAsync()
         {
             if (aiCancel != null)
                 return; // allaqachon ishlayapti
@@ -865,7 +880,7 @@ namespace ReklamaMaket
             string key = CurrentApiKey();
             if (string.IsNullOrEmpty(key))
             {
-                SetAiStatus("Avval OpenAI API kalitini kiriting va \"Saqlash\"ni bosing. Kalitni \"API kalit olish →\" havolasidan oling.", true);
+                SetAiStatus("Avval OpenAI API kalitini kiriting va «Saqlash»ni bosing. Kalitni «Kalit olish →» havolasidan oling.", true);
                 return;
             }
 
@@ -884,38 +899,39 @@ namespace ReklamaMaket
                 return;
             }
             RuleResult rules = SignRules.Check(settings);
-
-            if (!automatic && photoPath == null)
-            {
-                MessageBoxResult answer = MessageBox.Show(
-                    "Dizaynni haqiqiy joy (bino fasadi) rasmida ko'rsatish uchun rasm tanlaysizmi?\n\n" +
-                    "Ha — rasm tanlash\nYo'q — umumiy fasadda ko'rsatish",
-                    "ChatGPT — joy rasmi", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
-                if (answer == MessageBoxResult.Cancel || (answer == MessageBoxResult.Yes && !PickPhoto()))
-                    return;
-            }
             SaveAiSettings();
+
+            // Bino rasmi ustidagi ko'rinish chizilgan bo'lsa — ChatGPT logoni aynan shu joyda real qiladi
+            bool fromSelection = SendSelectionCheck.IsChecked == true;
+            bool composite = !fromSelection && lastResult?.PhotoDayView != null;
+            string rawPhoto = !composite && settings.HasPhoto ? settings.PhotoPath : null;
 
             var exported = new List<string>();
             string designFile;
             string nightFile = null;
+            string photoDayFile = null;
+            string photoNightFile = null;
             try
             {
-                if (SourceSelectionRadio.IsChecked == true)
+                if (fromSelection)
                 {
                     designFile = corelService.ExportSelectionPng(AiImagePixels);
+                    exported.Add(designFile);
                 }
                 else
                 {
                     if (lastResult?.DayView == null)
-                        throw new UserException("Avval \"CORELDA DIZAYN CHIZISH\" tugmasini bosing (yoki \"Corelda tanlangan obyekt\"ni tanlang).");
-                    designFile = corelService.ExportShapePng(lastResult.DayView, AiImagePixels);
+                        throw new UserException("Avval «Corel'da chizish» tugmasini bosing.");
+                    designFile = Export(lastResult.DayView, exported);
                     if (night && lastResult.NightView != null)
-                        nightFile = corelService.ExportShapePng(lastResult.NightView, AiImagePixels);
+                        nightFile = Export(lastResult.NightView, exported);
+                    if (composite)
+                    {
+                        photoDayFile = Export(lastResult.PhotoDayView, exported);
+                        if (night && lastResult.PhotoNightView != null)
+                            photoNightFile = Export(lastResult.PhotoNightView, exported);
+                    }
                 }
-                exported.Add(designFile);
-                if (nightFile != null)
-                    exported.Add(nightFile);
             }
             catch (Exception ex)
             {
@@ -942,20 +958,41 @@ namespace ReklamaMaket
                     Task<byte[]> dayTask = null, nightTask = null;
                     if (day)
                     {
-                        var images = new List<string> { designFile };
-                        if (photoPath != null)
-                            images.Add(photoPath);
-                        string prompt = PromptBuilder.Build(settings, rules, PromptBox.Text, false, false, photoPath != null);
+                        List<string> images;
+                        string prompt;
+                        if (composite)
+                        {
+                            images = new List<string> { photoDayFile, designFile };
+                            prompt = PromptBuilder.Build(settings, rules, PromptBox.Text, false, false, LocationMode.Composite);
+                        }
+                        else
+                        {
+                            images = new List<string> { designFile };
+                            if (rawPhoto != null)
+                                images.Add(rawPhoto);
+                            prompt = PromptBuilder.Build(settings, rules, PromptBox.Text, false, false, rawPhoto != null ? LocationMode.Photo : LocationMode.None);
+                        }
                         dayTask = client.EditImageAsync(images, prompt, model, size, quality, aiCancel.Token);
                     }
                     if (night)
                     {
-                        var images = new List<string> { designFile };
-                        if (nightFile != null)
-                            images.Add(nightFile);
-                        if (photoPath != null)
-                            images.Add(photoPath);
-                        string prompt = PromptBuilder.Build(settings, rules, PromptBox.Text, true, nightFile != null, photoPath != null);
+                        List<string> images;
+                        string prompt;
+                        if (composite && photoNightFile != null)
+                        {
+                            images = new List<string> { photoNightFile, nightFile ?? designFile };
+                            prompt = PromptBuilder.Build(settings, rules, PromptBox.Text, true, nightFile != null, LocationMode.Composite);
+                        }
+                        else
+                        {
+                            images = new List<string> { designFile };
+                            if (nightFile != null)
+                                images.Add(nightFile);
+                            if (settings.HasPhoto)
+                                images.Add(settings.PhotoPath);
+                            prompt = PromptBuilder.Build(settings, rules, PromptBox.Text, true, nightFile != null,
+                                settings.HasPhoto ? LocationMode.Photo : LocationMode.None);
+                        }
                         nightTask = client.EditImageAsync(images, prompt, model, size, quality, aiCancel.Token);
                     }
 
@@ -1010,6 +1047,13 @@ namespace ReklamaMaket
                 SetAiBusy(false);
                 exported.ForEach(CorelService.TryDelete);
             }
+        }
+
+        private string Export(corel.Shape shape, List<string> exported)
+        {
+            string file = corelService.ExportShapePng(shape, AiImagePixels);
+            exported.Add(file);
+            return file;
         }
 
         private static async Task<byte[]> Collect(Task<byte[]> task, List<string> errors)

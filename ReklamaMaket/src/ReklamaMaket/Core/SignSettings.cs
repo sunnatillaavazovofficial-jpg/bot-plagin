@@ -79,6 +79,28 @@ namespace ReklamaMaket.Core
         /// <summary>Detal o'lchami, mm (foydalanuvchi kiritgan).</summary>
         public Dictionary<Detail, double> DetailSizes { get; set; } = new Dictionary<Detail, double>();
 
+        // ---- Joyida: logo bino (joy) rasmi ustida
+
+        /// <summary>Bino rasmi fayli; bo'sh — rasm tanlanmagan.</summary>
+        public string PhotoPath { get; set; }
+
+        /// <summary>Rasm eni / bo'yi.</summary>
+        public double PhotoAspect { get; set; }
+
+        /// <summary>Belgi markazi rasmda: 0..1, chapdan.</summary>
+        public double PhotoX { get; set; } = 0.5;
+
+        /// <summary>Belgi markazi rasmda: 0..1, tepadan.</summary>
+        public double PhotoY { get; set; } = 0.45;
+
+        /// <summary>Belgi eni rasm eniga nisbatan (0..1).</summary>
+        public double PhotoSignWidth { get; set; } = 0.45;
+
+        /// <summary>Corel'da rasm ustidagi ko'rinishni ham chizish (kunduzi + kechasi).</summary>
+        public bool DrawOnPhoto { get; set; }
+
+        public bool HasPhoto => !string.IsNullOrEmpty(PhotoPath) && PhotoAspect > 0;
+
         // ---- Corel
         /// <summary>Corelda chizish masshtabi: 1:Scale.</summary>
         public int Scale { get; set; } = 10;

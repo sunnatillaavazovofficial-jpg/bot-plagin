@@ -11,6 +11,15 @@ using ReklamaMaket.Designs;
 
 namespace ReklamaMaket.Rendering
 {
+    /// <summary>Bino rasmi ustidagi ko'rinish: rasm (Root) va sichqoncha bilan suriladigan belgi (Sign).</summary>
+    public sealed class PhotoPreview
+    {
+        public Canvas Root { get; set; }
+        public FrameworkElement Sign { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
+    }
+
     /// <summary>
     /// Paneldagi jonli ko'rinish (kunduzi / kechasi). Logo rasmi niqob (mask) sifatida ishlatiladi:
     /// shu tufayli yuz, bort, nur va nuqtalarni istalgan rangda ko'rsatish mumkin.
@@ -21,7 +30,8 @@ namespace ReklamaMaket.Rendering
 
         private static BitmapSource placeholder;
 
-        public static FrameworkElement Build(SignSettings s, RuleResult rules, LogoInfo logo, bool night)
+        /// <param name="onPhoto">Bino rasmi ustida: "fonsiz" bo'lsa devor chizilmaydi.</param>
+        public static FrameworkElement Build(SignSettings s, RuleResult rules, LogoInfo logo, bool night, bool onPhoto = false)
         {
             SignLayout lay = LogoLayout.Compute(s);
             double px = Size / Math.Max(lay.BackgroundWidth, lay.BackgroundHeight);
@@ -32,7 +42,8 @@ namespace ReklamaMaket.Rendering
                 Height = lay.BackgroundHeight * px,
                 ClipToBounds = false
             };
-            root.Children.Add(Background(s, rules, night, root.Width, root.Height, px));
+            if (!(onPhoto && s.Background.Kind == BackgroundKind.Wall))
+                root.Children.Add(Background(s, rules, night, root.Width, root.Height, px));
 
             BitmapSource mask = logo?.Preview ?? Placeholder();
             var letters = new Grid
@@ -46,6 +57,39 @@ namespace ReklamaMaket.Rendering
             AddLetters(letters, s, rules, mask, logo?.Preview, night, px);
             root.Children.Add(letters);
             return root;
+        }
+
+        /// <summary>Belgi bino rasmi ustida (Corel'dagi "Joyida" ko'rinishi bilan bir xil joylashuv).</summary>
+        public static PhotoPreview BuildOnPhoto(SignSettings s, RuleResult rules, LogoInfo logo, bool night, ImageSource photo)
+        {
+            const double width = 640;
+            double height = width / s.PhotoAspect;
+            var canvas = new Canvas { Width = width, Height = height, ClipToBounds = true, Background = Brushes.Transparent };
+            canvas.Children.Add(new Image { Source = photo, Width = width, Height = height, Stretch = Stretch.Fill });
+            if (night)
+            {
+                canvas.Children.Add(new Rectangle
+                {
+                    Width = width,
+                    Height = height,
+                    Fill = Brush(ColorMath.NightSky),
+                    Opacity = ColorMath.NightPhotoDarkness,
+                    IsHitTestVisible = false
+                });
+            }
+
+            PhotoPlacement place = PhotoLayout.Compute(s);
+            var sign = new Viewbox
+            {
+                Width = place.Width * width,
+                Height = place.Height * height,
+                Stretch = Stretch.Fill,
+                Child = Build(s, rules, logo, night, true)
+            };
+            Canvas.SetLeft(sign, place.X * width);
+            Canvas.SetTop(sign, place.Y * height);
+            canvas.Children.Add(sign);
+            return new PhotoPreview { Root = canvas, Sign = sign, Width = width, Height = height };
         }
 
         private static UIElement Background(SignSettings s, RuleResult rules, bool night, double width, double height, double px)

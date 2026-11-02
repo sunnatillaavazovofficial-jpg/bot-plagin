@@ -129,11 +129,11 @@ namespace ReklamaMaket.Designs
         public bool IsCut => Cut != CutMode.None;
 
         /// <summary>Ro'yxatdagi guruh nomi.</summary>
-        public string Group => IsCut ? "Fonga o'yilgan logo (alyukobond)" : "Hajmli harflar (channel letters)";
+        public string Group => IsCut ? "Fonga o'yilgan logo" : "Hajmli harflar";
 
         /// <summary>Paneldagi rang va qalinlik yozuvlari (o'yilgan logoda ma'nosi boshqacha).</summary>
-        public string FaceColorLabel { get; set; } = "Yuz";
-        public string ReturnColorLabel { get; set; } = "Bort";
+        public string FaceColorLabel { get; set; } = "Oldi";
+        public string ReturnColorLabel { get; set; } = "Yoni";
         public string DepthLabel { get; set; } = "Qalinligi";
 
         /// <summary>Push-through harfning yuzdan chiqib turishi, mm.</summary>
@@ -166,114 +166,114 @@ namespace ReklamaMaket.Designs
 
         public static readonly LetterStyle[] All =
         {
-            new LetterStyle("Old tomoni yonadigan", "Front-lit channel letters",
+            new LetterStyle("Oldi yonadi", "Front-lit channel letters",
                 "Sutsimon akril yuz ichidan LED bilan yonadi, bort — bo'yalgan alyumin (rasmdagi YJ-N002).",
                 LightZones.Face, FaceMaterial.Acrylic, White, Rgb(0x2F3A45), White, 8, 80,
                 "Yuz: sutsimon akril 3 mm", "Bort: alyumin, bo'yalgan",
                 "front-lit channel letters: translucent acrylic faces lit from inside by LEDs, painted aluminium returns and a thin trim cap around each face"),
 
-            new LetterStyle("Qiya qirrali, old tomoni yonadi", "Face-lit letters with bevel edge",
+            new LetterStyle("Oldi yonadi, qirrasi qiya", "Face-lit letters with bevel edge",
                 "Akril yuzning qirrasi qiya (fasetkali), yuz yonadi (YJ-N001).",
                 LightZones.Face, FaceMaterial.Acrylic, White, Rgb(0xC9CDD2), White, 0, 60,
                 "Yuz: akril, qirrasi qiya", "Bort: alyumin, kumush rang",
                 "face-lit acrylic letters with a bevelled (chamfered) face edge and satin silver returns")
             { Bevel = true },
 
-            new LetterStyle("Oq yuz, qora bort", "Black & white face-lit letters",
+            new LetterStyle("Oldi oq yonadi, yoni qora", "Black & white face-lit letters",
                 "Oq akril yuz yonadi, bort qora (YJ-N007).",
                 LightZones.Face, FaceMaterial.Acrylic, White, Rgb(0x141414), White, 4, 60,
                 "Yuz: oq akril", "Bort: qora akril/alyumin",
                 "face-lit letters with a white acrylic face and black returns; only the white face glows"),
 
-            new LetterStyle("Yaxlit akril, yumaloq qirra", "Solid acrylic letters, round edge, fully lit",
+            new LetterStyle("Butun akril, hammasi yonadi", "Solid acrylic letters, round edge, fully lit",
                 "Butun harf sutsimon akrildan, qirralari yumaloq — yuzi ham, yoni ham bir tekis yonadi (YJ-N003).",
                 LightZones.Face | LightZones.SideFull, FaceMaterial.ClearAcrylic, Rgb(0xF4F6F8), Rgb(0xE6EAEE), White, 3, 50,
                 "Yuz va bort: yaxlit sutsimon akril", "Qirra: yumaloq",
                 "solid milky-white acrylic letters with rounded edges; the whole letter body (face and sides) glows evenly"),
 
-            new LetterStyle("Yaxlit rangli akril, to'g'ri qirra", "Solid coloured acrylic letters, square edge, fully lit",
+            new LetterStyle("Rangli akril, hammasi yonadi", "Solid coloured acrylic letters, square edge, fully lit",
                 "Rangli yaxlit akril, qirralari to'g'ri burchak, butun harf yonadi (YJ-N004).",
                 LightZones.Face | LightZones.SideFull, FaceMaterial.ClearAcrylic, Rgb(0xF05A1A), Rgb(0xB8400F), White, 3, 50,
                 "Yuz va bort: rangli akril", "Qirra: to'g'ri burchak",
                 "solid coloured translucent acrylic letters with sharp square edges; the whole letter glows in its colour"),
 
-            new LetterStyle("Old + orqa yonadigan", "Face & halo-lit letters",
+            new LetterStyle("Oldi va orqasi yonadi", "Face & halo-lit letters",
                 "Yuz yonadi va orqaga ham nur chiqadi — devorda yorug' kontur paydo bo'ladi (YJ-N008).",
                 LightZones.Face | LightZones.Halo, FaceMaterial.Acrylic, White, Rgb(0xEDEDED), White, 3, 70,
                 "Yuz: sutsimon akril", "Bort: alyumin, orqasi shaffof akril",
                 "letters lit on the face and also from the back (halo) so light glows on the wall behind; mounted about 30 mm off the wall on spacers")
             { OnStandoffs = true },
 
-            new LetterStyle("Orqadan yonadigan (kontrajur)", "Halo-lit (reverse channel) letters",
+            new LetterStyle("Orqasi yonadi (kontrajur)", "Halo-lit (reverse channel) letters",
                 "Yuz va bort metall, nur orqaga — devorga tushib harf atrofida yorug' kontur hosil qiladi.",
                 LightZones.Halo, FaceMaterial.Metal, Rgb(0x2A2A2A), Rgb(0x2A2A2A), White, 0, 60,
                 "Yuz: metall (yonmaydi)", "Bort: metall, orqasi shaffof akril",
                 "halo-lit reverse channel letters: solid metal face and returns, LEDs shine backwards onto the wall creating a soft glowing outline; letters stand 30–40 mm off the wall")
             { OnStandoffs = true },
 
-            new LetterStyle("Yon tomoni qisman yonadi", "Partial side-lit letters",
+            new LetterStyle("Yonida chiziq yonadi", "Partial side-lit letters",
                 "Metall yuz, bortda orqa tomonga yaqin ingichka yonadigan chiziq bor (YJ-N011).",
                 LightZones.SidePartial, FaceMaterial.Metal, Rgb(0x6B6F74), Rgb(0x6B6F74), White, 3, 60,
                 "Yuz: metall", "Bort: metall + yonadigan akril chiziq",
                 "metal-faced letters whose returns have a narrow translucent band near the back, so a thin line of light shows along the sides"),
 
-            new LetterStyle("Old + yon qisman yonadi", "Face & partial side-lit letters",
+            new LetterStyle("Oldi va yonida chiziq yonadi", "Face & partial side-lit letters",
                 "Akril yuz yonadi, bortda ham ingichka yonadigan chiziq (YJ-N013).",
                 LightZones.Face | LightZones.SidePartial, FaceMaterial.Acrylic, White, Rgb(0xEDEDED), White, 3, 60,
                 "Yuz: sutsimon akril", "Bort: alyumin + yonadigan akril chiziq",
                 "face-lit acrylic letters whose returns also have a narrow glowing band"),
 
-            new LetterStyle("Yon tomoni to'liq yonadi", "Side-lit letters (opaque face)",
+            new LetterStyle("Faqat yoni yonadi", "Side-lit letters (opaque face)",
                 "Yuz qora va yonmaydi, bort shaffof — kechasi faqat yon tomonlari yonadi (YJ-N015).",
                 LightZones.SideFull, FaceMaterial.Metal, Rgb(0x151515), Rgb(0xF2F2F2), White, 4, 50,
                 "Yuz: qora, yonmaydi", "Bort: oq shaffof akril",
                 "letters with an opaque black face and translucent white returns; at night only the sides glow"),
 
-            new LetterStyle("Hamma tomoni yonadi", "Front & side fully lit letters",
+            new LetterStyle("Oldi va yoni yonadi", "Front & side fully lit letters",
                 "Yuz ham, bort ham shaffof akril — butun harf yonadi (YJ-N016).",
                 LightZones.Face | LightZones.SideFull, FaceMaterial.ClearAcrylic, Rgb(0xF7F7F7), Rgb(0xF0F0F0), White, 3, 50,
                 "Yuz: sutsimon akril", "Bort: sutsimon akril",
                 "letters made fully of milky acrylic — face and sides glow brightly"),
 
-            new LetterStyle("Ochiq LED (skelet)", "Exposed LED (skeleton) letters",
+            new LetterStyle("Ochiq LED nuqtalar", "Exposed LED (skeleton) letters",
                 "Oq harf yuziga kichik ochiq LED nuqtalar qo'yilgan (YJ-N010).",
                 LightZones.Dots, FaceMaterial.Acrylic, White, Rgb(0xE9E9E9), White, 3, 60,
                 "Yuz: oq plastik + ochiq LED", "Bort: oq alyumin",
                 "white letters with small exposed LED points set into the face in rows"),
 
-            new LetterStyle("Lampochkali (marquee)", "Marquee bulb letters",
+            new LetterStyle("Lampochkali", "Marquee bulb letters",
                 "Bo'yalgan metall harf yuziga dumaloq lampochkalar o'rnatilgan.",
                 LightZones.Dots, FaceMaterial.Metal, Rgb(0x8E2B1E), Rgb(0x5A1A12), Warm, 6, 100,
                 "Yuz: bo'yalgan metall + lampochkalar", "Bort: bo'yalgan metall",
                 "marquee letters: painted metal letters with round warm-white light bulbs set into the face"),
 
-            new LetterStyle("Perforatsiyali + cheti yonadi", "Perforated pixel-LED letters with lit rim",
+            new LetterStyle("Piksel LED, cheti yonadi", "Perforated pixel-LED letters with lit rim",
                 "Qora teshikli metall yuz — teshiklarda LED piksellar, harf cheti neon kabi yonadi.",
                 LightZones.Dots | LightZones.Rim, FaceMaterial.Perforated, Rgb(0x1C1C1C), Rgb(0xB88A3B), Warm, 8, 80,
                 "Yuz: perforatsiyali qora metall + LED", "Bort: metall, cheti yonadigan akril",
                 "letters with a black perforated metal face showing tiny LED pixels through the holes and a glowing neon-like rim around the letter edge"),
 
-            new LetterStyle("Naqshli lazer kesma yuz", "Laser-cut pattern face letters",
+            new LetterStyle("Naqshli yuz (lazer)", "Laser-cut pattern face letters",
                 "To'q metall yuzda lazer bilan naqsh kesilgan, naqsh orqali iliq nur chiqadi.",
                 LightZones.Pattern, FaceMaterial.Pattern, Rgb(0x2A2522), Rgb(0x2A2522), Warm, 0, 60,
                 "Yuz: naqshli metall + akril qatlam", "Bort: to'q metall",
                 "letters with a dark metal face laser-cut in a decorative lattice pattern; warm light shines through the pattern from an acrylic layer behind"),
 
-            new LetterStyle("Akril harf, yoritilmaydi", "Non-illuminated acrylic letters on standoffs",
+            new LetterStyle("Akril harf, yonmaydi", "Non-illuminated acrylic letters on standoffs",
                 "Qalin shaffof akrildan kesilgan harf, yuzi qora; devordan biroz chiqib turadi. Yoritilmaydi.",
                 LightZones.None, FaceMaterial.ClearAcrylic, Rgb(0x1A1A1A), Rgb(0xDCE5EA), White, 0, 20,
                 "Yuz: qora plyonka", "Tana: shaffof akril",
                 "non-illuminated letters cut from thick clear acrylic with a black face, mounted slightly off the wall")
             { OnStandoffs = true },
 
-            new LetterStyle("Metall harf, yoritilmaydi", "Non-illuminated metal letters",
+            new LetterStyle("Metall harf, yonmaydi", "Non-illuminated metal letters",
                 "Zanglamaydigan po'lat yoki tilla rang metall harf. Yoritilmaydi.",
                 LightZones.None, FaceMaterial.Metal, Rgb(0xC9A44C), Rgb(0xA8873A), White, 0, 30,
                 "Yuz: metall", "Bort: metall",
                 "non-illuminated brushed metal letters"),
 
             // ---- Fonga o'yilgan logo (alyukobond)
-            new LetterStyle("O'yib chiqarilgan + akril, yonadi", "Routed (cut-out) face with flush acrylic, backlit",
+            new LetterStyle("O'yilgan, akril yonadi", "Routed (cut-out) face with flush acrylic, backlit",
                 "Alyukobond yuzdan logo frezerda o'yib chiqariladi, o'yiqqa yuz bilan bir tekis akril qo'yiladi, ichidan LED yoritadi " +
                 "(Cocktail, ABIERTO, OPEN rasmlari). Rangli akril yoki logoning o'z ranglari.",
                 LightZones.Face, FaceMaterial.Acrylic, White, White, White, 0, 10,
@@ -282,7 +282,7 @@ namespace ReklamaMaket.Designs
                 "with milky acrylic that sits flush with the face; LEDs inside the box make only the logo glow")
             { Cut = CutMode.RoutedLit, FaceColorLabel = "Akril", ReturnColorLabel = "—", DepthLabel = "Akril qalinligi" },
 
-            new LetterStyle("Push-through: akril harf chiqib turadi", "Push-through acrylic letters",
+            new LetterStyle("O'yilgan, akril harf chiqib turadi", "Push-through acrylic letters",
                 "Qalin akril harf yuzdagi o'yiqdan o'tib, tashqariga chiqib turadi; yuziga rangli plyonka, qirralari yonadi (\"akti\" rasmi).",
                 LightZones.Face | LightZones.SideFull, FaceMaterial.ClearAcrylic, Rgb(0x1FC7D4), White, White, 4, 20,
                 "Akril harf, yuzdan chiqib turadi", "Yuz: alyukobond 4 mm, logo o'yilgan",
@@ -290,15 +290,15 @@ namespace ReklamaMaket.Designs
                 "so they protrude from it; the letter faces are covered with coloured film and the clear edges glow brightly")
             { Cut = CutMode.PushThrough, FaceColorLabel = "Plyonka", ReturnColorLabel = "Qirra", DepthLabel = "Akril qalinligi" },
 
-            new LetterStyle("O'yib chiqarilgan, orqasida rangli panel", "Routed face over a contrasting backing panel",
+            new LetterStyle("O'yilgan, orqasida rangli list", "Routed face over a contrasting backing panel",
                 "Old panel o'yib chiqariladi, orqasidagi boshqa rangli panel ko'rinadi — ikki qatlamli (HORUS rasmidagi kichik yozuv).",
                 LightZones.None, FaceMaterial.Acrylic, Rgb(0x3FA9F5), White, White, 0, 4,
                 "Orqa panel (ikkinchi qatlam)", "Yuz: alyukobond 4 mm, logo o'yilgan",
                 "the logo is cut out through the front aluminium composite panel, revealing a second panel of a different colour mounted " +
                 "behind it (two-layer sign, not illuminated)")
-            { Cut = CutMode.RoutedBacking, FaceColorLabel = "Orqa panel", ReturnColorLabel = "—", DepthLabel = "Panel qalinligi" },
+            { Cut = CutMode.RoutedBacking, FaceColorLabel = "Orqa list", ReturnColorLabel = "—", DepthLabel = "List qalinligi" },
 
-            new LetterStyle("Gravirovka (o'yib yozilgan)", "Engraved (V-groove) logo",
+            new LetterStyle("Gravirovka, yonmaydi", "Engraved (V-groove) logo",
                 "Logo alyukobond yuziga frezer bilan o'yib yoziladi — o'yiqda kumush alyuminiy ko'rinadi.",
                 LightZones.None, FaceMaterial.Metal, Rgb(0xC9CED3), White, White, 0, 2,
                 "O'yiq: alyuminiy ko'rinadi", "Yuz: alyukobond 4 mm",

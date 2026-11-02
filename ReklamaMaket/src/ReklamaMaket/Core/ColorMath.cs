@@ -19,6 +19,12 @@ namespace ReklamaMaket.Core
         /// <summary>Alyuminiy (gravirovka o'yig'i).</summary>
         public static readonly Color Silver = Rgb(0xC9CED3);
 
+        /// <summary>Bino rasmini "kechasi" qilish uchun ustidan qo'yiladigan qorong'i rang.</summary>
+        public static readonly Color NightSky = Rgb(0x0A1022);
+
+        /// <summary>Kechki rasmda qorong'ilik darajasi (0 — o'zgarmaydi, 1 — butunlay qora).</summary>
+        public const double NightPhotoDarkness = 0.62;
+
         /// <summary>Kechasi yorug'lik darajasiga mos rang (0 — qorong'i, eng yuqori — nur rangi).</summary>
         public static Color LightLevel(Color behind, Color light, int level, int levels)
         {

@@ -7,6 +7,19 @@ using ReklamaMaket.Designs;
 
 namespace ReklamaMaket.Ai
 {
+    /// <summary>Joy (bino) rasmi ChatGPT'ga qanday beriladi.</summary>
+    public enum LocationMode
+    {
+        /// <summary>Rasm yo'q — belgi umumiy fasadda ko'rsatiladi.</summary>
+        None,
+
+        /// <summary>Bino rasmi alohida yuboriladi — ChatGPT belgini o'zi joylaydi.</summary>
+        Photo,
+
+        /// <summary>Belgi plaginda rasm ustiga qo'yilgan — aynan shu joyda va shu kattalikda real qilinadi.</summary>
+        Composite
+    }
+
     /// <summary>
     /// ChatGPT uchun so'rov matni: foydalanuvchi matni + plagin dizayni haqida tushuntirish
     /// (rasm qanday o'qiladi, harf va fon tuzilishi, ranglar, gul, yoritilish) + kunduzi/kechasi.
@@ -23,21 +36,26 @@ namespace ReklamaMaket.Ai
             "its letters, shapes or colours. Show the logo from this picture as a real, physically manufactured 3D sign " +
             "with realistic materials, depth, lighting and shadows.";
 
-        public static string Build(SignSettings s, RuleResult rules, string userPrompt, bool night, bool hasNightReference, bool hasLocationPhoto)
+        public static string Build(SignSettings s, RuleResult rules, string userPrompt, bool night, bool hasNightReference, LocationMode location)
         {
             var text = new StringBuilder();
             text.AppendLine((string.IsNullOrWhiteSpace(userPrompt) ? DefaultPrompt : userPrompt).Trim());
             text.AppendLine();
 
-            AppendImageGuide(text, s, hasNightReference, hasLocationPhoto);
+            if (location == LocationMode.Composite)
+                AppendCompositeGuide(text, s, night);
+            else
+                AppendImageGuide(text, s, hasNightReference, location == LocationMode.Photo);
             text.AppendLine();
-            AppendDesign(text, s, rules);
+            AppendDesign(text, s, rules, location != LocationMode.None);
             text.AppendLine();
 
             text.AppendLine("Requirements:");
             text.AppendLine("- Build exactly this construction with these materials and colours; keep every letter, shape, colour and the spacing of the logo unchanged.");
             text.AppendLine("- Keep the background type, its pattern and frame as designed; the logo must stay in the same place on the background.");
             text.AppendLine("- Do not add any extra text, logos, people, plants or decorations to the sign.");
+            if (location == LocationMode.Composite)
+                text.AppendLine("- Do not move, enlarge or shrink the sign; do not change the building or the surroundings.");
             text.AppendLine();
 
             if (!night)
@@ -76,8 +94,23 @@ namespace ReklamaMaket.Ai
             }
         }
 
+        /// <summary>Belgi plaginda bino rasmi ustiga qo'yilgan: 1-rasm — joy + belgi, 2-rasm — belgining texnik ko'rinishi.</summary>
+        private static void AppendCompositeGuide(StringBuilder text, SignSettings s, bool night)
+        {
+            text.AppendLine("How to read the attached images:");
+            text.AppendLine("- Image 1 is a photo of the real location. The sign design from the \"Reklama Maket\" CorelDRAW plugin has been pasted " +
+                            "onto it as a flat drawing at the exact position and size where the sign will be installed" +
+                            (night ? "; the photo has been darkened to show the night, and the drawing shows how the sign lights up." : "."));
+            text.AppendLine("- Replace this flat drawing with the real, physically manufactured 3D sign at exactly the same position and size: " +
+                            "match the perspective of the facade, the light and the shadows of the photo, and keep everything else in the photo unchanged.");
+            text.AppendLine("- Image 2 is the flat, straight-on technical front view of the same sign " +
+                            (night ? "at night (bright areas show exactly what lights up)" : "in its real colours") +
+                            ", drawn at scale 1:" + s.Scale + " in real proportions; use it for the exact details of the sign.");
+        }
+
         /// <summary>Dizayn tavsifi: harflar, fon, o'lchamlar, qoidalar.</summary>
-        private static void AppendDesign(StringBuilder text, SignSettings s, RuleResult rules)
+        /// <param name="onPhoto">Bino rasmi bor: "fonsiz" bo'lsa devor rangi rasmdagi devor — so'rovga yozilmaydi.</param>
+        private static void AppendDesign(StringBuilder text, SignSettings s, RuleResult rules, bool onPhoto)
         {
             SignLayout layout = LogoLayout.Compute(s);
             LetterStyle letter = s.Letter;
@@ -119,7 +152,8 @@ namespace ReklamaMaket.Ai
             string backgroundLine = "- Background: " + background.EnglishName + " — " + background.PromptDetails;
             if (background.HasPattern)
                 backgroundLine += "; pattern: " + s.Pattern.EnglishName + " (about " + Mm(SignDetails.SizeOf(s, Detail.Pattern)) + " mm pitch)";
-            backgroundLine += "; colour " + ColorMath.Describe(s.BackgroundColor);
+            if (!(onPhoto && background.Kind == BackgroundKind.Wall))
+                backgroundLine += "; colour " + ColorMath.Describe(s.BackgroundColor);
             if (SignDetails.Applies(s, Detail.Frame))
             {
                 double frame = SignDetails.SizeOf(s, Detail.Frame);

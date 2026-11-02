@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using ReklamaMaket.Core;
@@ -17,11 +18,18 @@ namespace ReklamaMaket.Rendering
 
         /// <summary>Kechki ko'rinish (chizilmagan bo'lsa null).</summary>
         public corel.Shape NightView { get; set; }
+
+        /// <summary>Bino rasmi ustida, kunduzi (rasm tanlanmagan bo'lsa null).</summary>
+        public corel.Shape PhotoDayView { get; set; }
+
+        /// <summary>Bino rasmi ustida, kechasi.</summary>
+        public corel.Shape PhotoNightView { get; set; }
     }
 
     /// <summary>
     /// Hajmli harf (channel letters) dizaynini Corelga vektor obyektlar sifatida chizadi:
-    /// kunduzgi va kechki ko'rinish, yon kesim sxemasi, o'lcham chiziqlari va sarlavha.
+    /// kunduzgi va kechki ko'rinish, yon kesim sxemasi, o'lcham chiziqlari, sarlavha va
+    /// (bino rasmi tanlangan bo'lsa) rasm ustidagi kunduzgi va kechki ko'rinish.
     /// Hammasi bitta "Undo" (Ctrl+Z) bilan bekor qilinadi.
     /// </summary>
     public sealed class ChannelLetterRenderer
@@ -80,6 +88,12 @@ namespace ReklamaMaket.Rendering
             public double MaxY;
             public double CaptionY;
             public double TitleY;
+
+            // Bino rasmi qatori (asosiy qator ostida): rasmning yuqori cheti, o'lchami, kechki rasm siljishi
+            public double PhotoTop;
+            public double PhotoWidth;
+            public double PhotoHeight;
+            public double PhotoNightX;
         }
 
         public DrawResult Draw(corel.Document doc, SignSettings settings, LogoInfo logo)
@@ -117,6 +131,13 @@ namespace ReklamaMaket.Rendering
                     Final(DrawSection(ox + frame.SectionX, oy, frame.SectionHeight), "Yon kesim");
                 if (s.DrawDimensions)
                     Final(DrawDimensions(), "O'lchamlar");
+                if (PhotoRow)
+                {
+                    List<corel.Shape>[] photo = DrawPhotoViews(frame);
+                    result.PhotoDayView = Final(photo[0], "Joyida kunduzi");
+                    if (photo[1] != null)
+                        result.PhotoNightView = Final(photo[1], "Joyida kechasi");
+                }
                 Final(DrawCaptions(frame), "Sarlavha");
 
                 DeleteAll(temporaries);
@@ -151,6 +172,9 @@ namespace ReklamaMaket.Rendering
         // ================================================================ joylashuv
 
         private bool HasBackgroundDims => s.Background.Kind != BackgroundKind.Wall;
+
+        /// <summary>Bino rasmi ustidagi ko'rinish ham chiziladi.</summary>
+        private bool PhotoRow => s.DrawOnPhoto && s.HasPhoto;
 
         private Frame ComputeFrame()
         {
@@ -187,6 +211,18 @@ namespace ReklamaMaket.Rendering
             // Uzun sarlavha sahifadan chiqmasin
             double titleWidth = TitleLines().Max(line => line.Length) * th * 1.1 * 0.58;
             frame.MaxX = Math.Max(frame.MaxX, frame.MinX + titleWidth);
+
+            // Bino rasmi qatori: belgi rasmda tanlangan kattalikda turishi uchun rasm shunga moslab kattalashtiriladi
+            if (PhotoRow)
+            {
+                PhotoPlacement place = PhotoLayout.Compute(s);
+                frame.PhotoWidth = viewW / place.Width;
+                frame.PhotoHeight = frame.PhotoWidth / s.PhotoAspect;
+                frame.PhotoTop = frame.MinY - th * 3.5;
+                frame.PhotoNightX = s.DrawNight ? frame.PhotoWidth + gap : 0;
+                frame.MinY = frame.PhotoTop - frame.PhotoHeight;
+                frame.MaxX = Math.Max(frame.MaxX, frame.PhotoNightX + frame.PhotoWidth);
+            }
             return frame;
         }
 
@@ -303,15 +339,16 @@ namespace ReklamaMaket.Rendering
 
         // ================================================================ kunduzi / kechasi
 
-        private List<corel.Shape> DrawView(bool night, double vx, double vy)
+        /// <param name="onPhoto">Bino rasmi ustida: "fonsiz" bo'lsa devor chizilmaydi — rasmdagi devor ko'rinadi.</param>
+        private List<corel.Shape> DrawView(bool night, double vx, double vy, bool onPhoto = false)
         {
             var items = new List<corel.Shape>();
-            DrawBackground(items, night, vx, vy);
+            DrawBackground(items, night, vx, vy, onPhoto);
             DrawLetters(items, night, vx - ox, vy - oy);
             return items;
         }
 
-        private void DrawBackground(List<corel.Shape> items, bool night, double vx, double vy)
+        private void DrawBackground(List<corel.Shape> items, bool night, double vx, double vy, bool onPhoto)
         {
             WpfColor color = s.BackgroundColor;
             bool lit = night && rules.BackgroundLit;
@@ -321,7 +358,8 @@ namespace ReklamaMaket.Rendering
             switch (s.Background.Kind)
             {
                 case BackgroundKind.Wall:
-                    items.Add(Box(vx, vy, viewW, viewH, surface));
+                    if (!onPhoto)
+                        items.Add(Box(vx, vy, viewW, viewH, surface));
                     break;
 
                 case BackgroundKind.Panel:
@@ -747,6 +785,76 @@ namespace ReklamaMaket.Rendering
                 shape.Transparency.ApplyUniformTransparency(transparency);
                 items.Add(shape);
             }
+        }
+
+        // ================================================================ bino rasmi ustida
+
+        /// <summary>Bino rasmi ustida: kunduzi va kechasi (rasm qoraytiriladi, belgi yonib turadi).</summary>
+        private List<corel.Shape>[] DrawPhotoViews(Frame frame)
+        {
+            double left = ox;
+            double top = oy + frame.PhotoTop;
+            double width = frame.PhotoWidth;
+            double height = frame.PhotoHeight;
+
+            // Rasm bir marta import qilinadi; kechki nusxa undan olinadi (ikkalasi ham belgidan orqada turadi)
+            corel.Shape dayPhoto = ImportPhoto(left, top, width, height);
+            corel.Shape nightPhoto = s.DrawNight ? Dup(dayPhoto, frame.PhotoNightX, 0) : null;
+
+            var day = new List<corel.Shape> { dayPhoto };
+            day.AddRange(DrawSignOnPhoto(false, left, top, width, height));
+
+            List<corel.Shape> night = null;
+            if (nightPhoto != null)
+            {
+                double nightLeft = left + frame.PhotoNightX;
+                corel.Shape dark = Box(nightLeft, top - height, width, height, ColorMath.NightSky);
+                dark.Transparency.ApplyUniformTransparency((int)Math.Round((1 - ColorMath.NightPhotoDarkness) * 100));
+                night = new List<corel.Shape> { nightPhoto, dark };
+                night.AddRange(DrawSignOnPhoto(true, nightLeft, top, width, height));
+            }
+            return new[] { day, night };
+        }
+
+        private corel.Shape ImportPhoto(double left, double top, double width, double height)
+        {
+            if (!File.Exists(s.PhotoPath))
+                throw new UserException("Bino rasmi topilmadi: " + s.PhotoPath);
+
+            corel.ShapeRange imported;
+            try
+            {
+                // Import tanlovni yangilashi uchun optimizatsiya vaqtincha o'chiriladi
+                app.Optimization = false;
+                layer.Import(s.PhotoPath);
+                imported = doc.SelectionRange;
+            }
+            catch (Exception ex)
+            {
+                throw new UserException("Bino rasmini Corel'ga qo'yib bo'lmadi — JPG yoki PNG rasm tanlang: " + Path.GetFileName(s.PhotoPath), ex);
+            }
+            finally
+            {
+                app.Optimization = true;
+            }
+            if (imported == null || imported.Count == 0)
+                throw new UserException("Bino rasmini Corel'ga qo'yib bo'lmadi: " + Path.GetFileName(s.PhotoPath));
+
+            corel.Shape photo = Track(imported.Count > 1 ? imported.Group() : imported.FirstShape);
+            photo.SetSize(width, height);
+            photo.CenterX = left + width / 2;
+            photo.CenterY = top - height / 2;
+            photo.Name = "Bino rasmi";
+            return photo;
+        }
+
+        /// <summary>Belgi rasmdagi joyida: o'lchami va o'rni — <see cref="PhotoLayout"/> (panel ko'rinishi bilan bir xil).</summary>
+        private List<corel.Shape> DrawSignOnPhoto(bool night, double left, double top, double width, double height)
+        {
+            PhotoPlacement place = PhotoLayout.Compute(s);
+            double vx = left + place.X * width;
+            double vy = top - place.Y * height - viewH;
+            return DrawView(night, vx, vy, true);
         }
 
         // ================================================================ yon kesim (sxema)
@@ -1278,6 +1386,13 @@ namespace ReklamaMaket.Rendering
             }
             if (s.DrawSection)
                 items.Add(Label("YON KESIM (sxema)", ox + frame.SectionX + frame.SectionHeight * 0.35, captionY, th, 0));
+            if (PhotoRow)
+            {
+                double photoCaptionY = oy + frame.PhotoTop + th * 1.2;
+                items.Add(Label("JOYIDA — KUNDUZI", ox + frame.PhotoWidth / 2, photoCaptionY, th, 0));
+                if (s.DrawNight)
+                    items.Add(Label("JOYIDA — KECHASI", ox + frame.PhotoNightX + frame.PhotoWidth / 2, photoCaptionY, th, 0));
+            }
 
             List<string> lines = TitleLines();
             for (int i = 0; i < lines.Count; i++)

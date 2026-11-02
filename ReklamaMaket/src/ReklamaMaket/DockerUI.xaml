@@ -1,9 +1,9 @@
 <UserControl x:Class="ReklamaMaket.DockerUI"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             MinWidth="270"
+             MinWidth="280"
              FontFamily="Segoe UI"
-             FontSize="12"
+             FontSize="12.5"
              Unloaded="DockerUI_Unloaded">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -16,137 +16,183 @@
     <DockPanel Background="{StaticResource PanelBrush}">
 
         <!-- Sarlavha -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" Padding="12,8">
-            <StackPanel>
-                <TextBlock Text="REKLAMA MAKET" Foreground="White" FontWeight="Bold" FontSize="14"/>
-                <TextBlock Text="Hajmli harflar (Channel letters): dizayn, o'lcham va ChatGPT bilan real ko'rinish"
-                           Foreground="#D6E4FF" FontSize="11" TextWrapping="Wrap"/>
-            </StackPanel>
-        </Border>
+        <StackPanel DockPanel.Dock="Top" Margin="16,14,16,4">
+            <TextBlock Text="CorelDRAW · tashqi reklama" Foreground="{StaticResource MutedBrush}"/>
+            <TextBlock Style="{StaticResource Title}" Text="Reklama Maket"/>
+        </StackPanel>
 
-        <!-- Pastki tugma -->
-        <Border DockPanel.Dock="Bottom" Background="{StaticResource CardBrush}"
-                BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0" Padding="8,6,8,8">
-            <StackPanel>
-                <Button x:Name="CreateButton" Style="{StaticResource PrimaryButton}"
-                        Content="CORELDA DIZAYN CHIZISH" Click="CreateButton_Click"/>
-                <TextBlock x:Name="StatusText" Style="{StaticResource Hint}" Margin="2,4,2,0"/>
-            </StackPanel>
-        </Border>
+        <!-- Pastki panel: sozlamalar · chizish · ChatGPT -->
+        <ContentControl DockPanel.Dock="Bottom" Style="{StaticResource Card}" Margin="10,4,10,10" Padding="6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="SettingsButton" Style="{StaticResource RoundButton}" Content="&#xE713;"
+                        ToolTip="Chizma sozlamalari" Click="SettingsButton_Click"/>
+                <Button x:Name="CreateButton" Grid.Column="1" Style="{StaticResource PrimaryButton}" Margin="6,0"
+                        Content="Corel'da chizish" Click="CreateButton_Click"/>
+                <Button x:Name="AiQuickButton" Grid.Column="2" Style="{StaticResource RoundPrimaryButton}" Content="&#xE724;"
+                        ToolTip="ChatGPT: real rasm (kunduzi va kechasi)" Click="AiQuickButton_Click"/>
+
+                <Popup x:Name="SettingsPopup" PlacementTarget="{Binding ElementName=SettingsButton}" Placement="Top"
+                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" VerticalOffset="-6">
+                    <ContentControl Style="{StaticResource Card}" Width="250" Margin="8">
+                        <StackPanel>
+                            <TextBlock Text="Corel chizmasi" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="90"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Masshtab"/>
+                                <ComboBox x:Name="ScaleCombo" Grid.Column="1" Style="{StaticResource Select}"
+                                          ItemStringFormat="1:{0}" SelectionChanged="Setting_Changed"/>
+                            </Grid>
+                            <CheckBox x:Name="NightCheck" IsChecked="True" Content="Kechki ko'rinish" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                            <CheckBox x:Name="SectionCheck" IsChecked="True" Content="Yon kesim" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                            <CheckBox x:Name="DimensionsCheck" IsChecked="True" Content="O'lchamlar" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                            <CheckBox x:Name="NewPageCheck" IsChecked="True" Content="Yangi sahifada" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                        </StackPanel>
+                    </ContentControl>
+                </Popup>
+            </Grid>
+        </ContentControl>
+
+        <TextBlock x:Name="StatusText" DockPanel.Dock="Bottom" Style="{StaticResource Hint}" Margin="18,2,18,0"/>
 
         <!-- Ko'rinish: doim yuqorida -->
-        <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Margin="8,8,8,0">
+        <ContentControl DockPanel.Dock="Top" Style="{StaticResource Card}" Margin="10,6,10,0" Padding="12">
             <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <RadioButton x:Name="DayRadio" Style="{StaticResource Segment}" Content="Kunduzi" IsChecked="True"
-                                 GroupName="PreviewMode" Checked="Setting_Changed"/>
-                    <RadioButton x:Name="NightRadio" Style="{StaticResource Segment}" Content="Kechasi"
-                                 GroupName="PreviewMode" Checked="Setting_Changed"/>
-                </StackPanel>
-                <Border x:Name="PreviewHost" Height="200" CornerRadius="4" Padding="8" Background="{StaticResource CheckerBrush}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="DayRadio" Style="{StaticResource Chip}" Tag="&#xE706;" Content="Kunduzi" IsChecked="True"
+                                     GroupName="PreviewMode" Checked="Setting_Changed"/>
+                        <RadioButton x:Name="NightRadio" Style="{StaticResource Chip}" Tag="&#xE708;" Content="Kechasi"
+                                     GroupName="PreviewMode" Checked="Setting_Changed"/>
+                    </StackPanel>
+                    <ToggleButton x:Name="PhotoViewToggle" Grid.Column="2" Style="{StaticResource Chip}" Tag="&#xE80F;" Margin="0,0,0,6"
+                                  Content="Joyida" IsEnabled="False" ToolTip="Bino rasmi ustida ko'rish"
+                                  Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                </Grid>
+                <Border x:Name="PreviewHost" Height="190" CornerRadius="12" Padding="6" Background="{StaticResource CheckerBrush}"
+                        MouseLeftButtonDown="Preview_MouseDown" MouseMove="Preview_MouseMove"
+                        MouseLeftButtonUp="Preview_MouseUp" MouseWheel="Preview_MouseWheel">
                     <Viewbox x:Name="PreviewBox" Stretch="Uniform"/>
                 </Border>
-                <TextBlock x:Name="SizeInfoText" Style="{StaticResource Hint}" Margin="0,4,0,0"/>
+                <TextBlock x:Name="SizeInfoText" Style="{StaticResource Hint}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                 <Border x:Name="WarningBox" Style="{StaticResource WarningBox}" Visibility="Collapsed">
                     <TextBlock x:Name="WarningText" TextWrapping="Wrap" Foreground="{StaticResource WarningTextBrush}" FontSize="11.5"/>
                 </Border>
             </StackPanel>
-        </Border>
+        </ContentControl>
+
+        <!-- Bo'limlar -->
+        <WrapPanel DockPanel.Dock="Top" Margin="12,12,6,2">
+            <RadioButton x:Name="TabLogo" Style="{StaticResource Chip}" Tag="&#xE8B9;" Content="Logo" GroupName="Tabs" IsChecked="True" Checked="Tab_Checked"/>
+            <RadioButton x:Name="TabLetter" Style="{StaticResource Chip}" Tag="&#xE8D2;" Content="Harf" GroupName="Tabs" Checked="Tab_Checked"/>
+            <RadioButton x:Name="TabBackground" Style="{StaticResource Chip}" Tag="&#xE80A;" Content="Fon" GroupName="Tabs" Checked="Tab_Checked"/>
+            <RadioButton x:Name="TabPhoto" Style="{StaticResource Chip}" Tag="&#xE80F;" Content="Joyida" GroupName="Tabs" Checked="Tab_Checked"/>
+            <RadioButton x:Name="TabAi" Style="{StaticResource Chip}" Tag="&#xE8BD;" Content="AI" ToolTip="ChatGPT: real rasm" GroupName="Tabs" Checked="Tab_Checked"/>
+        </WrapPanel>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="8">
+            <StackPanel Margin="10,4,10,4">
 
-                <!-- 1. Logo -->
-                <Border Style="{StaticResource Card}">
+                <!-- LOGO -->
+                <ContentControl x:Name="LogoPage" Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="1. LOGO"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="64"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Border Width="64" Height="64" Background="{StaticResource CheckerBrush}"
-                                    BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="4">
-                                <Image x:Name="LogoImage" Stretch="Uniform" Margin="4"/>
+                            <Border Width="64" Height="64" CornerRadius="14" Background="{StaticResource CheckerBrush}">
+                                <Image x:Name="LogoImage" Stretch="Uniform" Margin="6"/>
                             </Border>
-                            <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="LogoInfoText" Text="Logo tanlanmagan" TextWrapping="Wrap"
-                                           Foreground="{StaticResource TextBrush}"/>
-                                <Button x:Name="CaptureButton" Style="{StaticResource SecondaryButton}" Margin="0,6,0,0"
-                                        Content="Tanlangan logoni olish" Click="CaptureButton_Click"/>
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="LogoInfoText" Text="Logo tanlanmagan" TextWrapping="Wrap"/>
+                                <Button x:Name="CaptureButton" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left"
+                                        Margin="0,6,0,0" Content="Corel'dan logoni olish" Click="CaptureButton_Click"/>
                             </StackPanel>
                         </Grid>
 
-                        <Grid Margin="0,8,0,0">
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Haqiqiy o'lchami"/>
+                        <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="28"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Bo'yi"/>
-                            <TextBox x:Name="LogoHeightBox" Grid.Column="1" TextChanged="LogoHeight_Changed"/>
-                            <TextBlock x:Name="LogoHeightUnit" Grid.Column="2" Style="{StaticResource Hint}" Margin="4,0,0,0" VerticalAlignment="Center"/>
-
-                            <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Eni"/>
-                            <TextBox x:Name="LogoWidthBox" Grid.Row="1" Grid.Column="1" TextChanged="LogoWidth_Changed"/>
-                            <TextBlock x:Name="LogoWidthUnit" Grid.Row="1" Grid.Column="2" Style="{StaticResource Hint}" Margin="4,0,0,0" VerticalAlignment="Center"/>
-
-                            <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="Birlik"/>
-                            <ComboBox x:Name="UnitCombo" Grid.Row="2" Grid.Column="1" SelectionChanged="UnitCombo_SelectionChanged"/>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}" Text="Bo'yi"/>
+                                <DockPanel>
+                                    <TextBlock x:Name="LogoHeightUnit" DockPanel.Dock="Right" Style="{StaticResource Unit}"/>
+                                    <TextBox x:Name="LogoHeightBox" TextChanged="LogoHeight_Changed"/>
+                                </DockPanel>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Style="{StaticResource Hint}" Text="Eni"/>
+                                <DockPanel>
+                                    <TextBlock x:Name="LogoWidthUnit" DockPanel.Dock="Right" Style="{StaticResource Unit}"/>
+                                    <TextBox x:Name="LogoWidthBox" TextChanged="LogoWidth_Changed"/>
+                                </DockPanel>
+                            </StackPanel>
                         </Grid>
-                        <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
-                                   Text="Eni va bo'yi logo proporsiyasi bo'yicha bog'langan. Asl logo o'zgarmaydi."/>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <RadioButton x:Name="UnitMmRadio" Style="{StaticResource Chip}" Content="mm" GroupName="Unit" IsChecked="True" Checked="Unit_Checked"/>
+                            <RadioButton x:Name="UnitCmRadio" Style="{StaticResource Chip}" Content="sm" GroupName="Unit" Checked="Unit_Checked"/>
+                            <RadioButton x:Name="UnitMRadio" Style="{StaticResource Chip}" Content="m" GroupName="Unit" Checked="Unit_Checked"/>
+                        </StackPanel>
                     </StackPanel>
-                </Border>
+                </ContentControl>
 
-                <!-- 2. Harf (logo) dizayni -->
-                <Border Style="{StaticResource Card}">
+                <!-- HARF -->
+                <ContentControl x:Name="LetterPage" Style="{StaticResource Card}" Visibility="Collapsed">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="2. LOGO DIZAYNI (HARF YOKI O'YIQ)"/>
-                        <ComboBox x:Name="LetterCombo" SelectionChanged="LetterCombo_SelectionChanged">
+                        <TextBlock Style="{StaticResource SectionTitle}" Margin="0,0,0,4" Text="Harf turi"/>
+                        <ComboBox x:Name="LetterCombo" Style="{StaticResource Select}" SelectionChanged="LetterCombo_SelectionChanged">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Margin="0,1">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding EnglishName}" FontSize="10.5" Foreground="#69717C"/>
-                                    </StackPanel>
+                                    <TextBlock Text="{Binding Name}" ToolTip="{Binding Description}"/>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                             <ComboBox.GroupStyle>
                                 <GroupStyle>
                                     <GroupStyle.HeaderTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="10.5" Foreground="#2F6FDE"
-                                                       Margin="4,6,0,2"/>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11.5"
+                                                       Foreground="{StaticResource MutedBrush}" Margin="10,8,0,2"/>
                                         </DataTemplate>
                                     </GroupStyle.HeaderTemplate>
                                 </GroupStyle>
                             </ComboBox.GroupStyle>
                         </ComboBox>
-                        <TextBlock x:Name="LetterDescription" Style="{StaticResource Hint}" Margin="0,4,0,8"/>
-
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="28"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="DepthLabel" Style="{StaticResource FieldLabel}" Text="Qalinligi"/>
-                            <TextBox x:Name="DepthBox" Grid.Column="1" TextChanged="Setting_Changed"/>
-                            <TextBlock x:Name="DepthUnit" Grid.Column="2" Style="{StaticResource Hint}" Margin="4,0,0,0" VerticalAlignment="Center"/>
-                        </Grid>
 
                         <Grid Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" MinWidth="44"/>
-                                <ColumnDefinition Width="34"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="110"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="DepthLabel" Style="{StaticResource FieldLabel}" Text="Qalinligi"/>
+                            <DockPanel Grid.Column="1">
+                                <TextBlock x:Name="DepthUnit" DockPanel.Dock="Right" Style="{StaticResource Unit}"/>
+                                <TextBox x:Name="DepthBox" TextChanged="Setting_Changed"/>
+                            </DockPanel>
+                        </Grid>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Ranglar"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="86"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition/>
@@ -155,273 +201,306 @@
                                 <RowDefinition/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock x:Name="FaceColorLabel" Style="{StaticResource FieldLabel}" Text="Yuz"/>
-                            <Button x:Name="FaceButton" Grid.Column="1" Tag="Face" Style="{StaticResource Swatch}" Width="28"
-                                    Margin="0,2,6,2" ToolTip="Yuz rangi" Click="ColorButton_Click"/>
-                            <TextBox x:Name="FaceHex" Grid.Column="2" Tag="Face" HorizontalContentAlignment="Left" TextChanged="Hex_TextChanged"/>
+                            <TextBlock x:Name="FaceColorLabel" Style="{StaticResource FieldLabel}" Text="Oldi"/>
+                            <Button x:Name="FaceButton" Grid.Column="1" Tag="Face" Style="{StaticResource Swatch}" Width="32" Height="32"
+                                    Margin="0,3,6,3" ToolTip="Rang tanlash" Click="ColorButton_Click"/>
+                            <TextBox x:Name="FaceHex" Grid.Column="2" Tag="Face" TextChanged="Hex_TextChanged"/>
 
-                            <TextBlock x:Name="ReturnColorLabel" Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Bort"/>
-                            <Button x:Name="ReturnButton" Grid.Row="1" Grid.Column="1" Tag="Return" Style="{StaticResource Swatch}" Width="28"
-                                    Margin="0,2,6,2" ToolTip="Bort (yon tomoni) rangi" Click="ColorButton_Click"/>
-                            <TextBox x:Name="ReturnHex" Grid.Row="1" Grid.Column="2" Tag="Return" HorizontalContentAlignment="Left" TextChanged="Hex_TextChanged"/>
+                            <TextBlock x:Name="ReturnColorLabel" Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Yoni"/>
+                            <Button x:Name="ReturnButton" Grid.Row="1" Grid.Column="1" Tag="Return" Style="{StaticResource Swatch}" Width="32" Height="32"
+                                    Margin="0,3,6,3" ToolTip="Rang tanlash" Click="ColorButton_Click"/>
+                            <TextBox x:Name="ReturnHex" Grid.Row="1" Grid.Column="2" Tag="Return" TextChanged="Hex_TextChanged"/>
 
-                            <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="Nur"/>
-                            <Button x:Name="LightButton" Grid.Row="2" Grid.Column="1" Tag="Light" Style="{StaticResource Swatch}" Width="28"
-                                    Margin="0,2,6,2" ToolTip="LED nuri rangi" Click="ColorButton_Click"/>
-                            <TextBox x:Name="LightHex" Grid.Row="2" Grid.Column="2" Tag="Light" HorizontalContentAlignment="Left" TextChanged="Hex_TextChanged"/>
+                            <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="Chiroq"/>
+                            <Button x:Name="LightButton" Grid.Row="2" Grid.Column="1" Tag="Light" Style="{StaticResource Swatch}" Width="32" Height="32"
+                                    Margin="0,3,6,3" ToolTip="Rang tanlash" Click="ColorButton_Click"/>
+                            <TextBox x:Name="LightHex" Grid.Row="2" Grid.Column="2" Tag="Light" TextChanged="Hex_TextChanged"/>
 
-                            <WrapPanel x:Name="LightSwatches" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,4,0,0"/>
+                            <WrapPanel x:Name="LightSwatches" Grid.Row="3" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,4,0,0"/>
                         </Grid>
+                        <CheckBox x:Name="KeepColorsCheck" Content="Logoning o'z ranglari" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
 
-                        <CheckBox x:Name="KeepColorsCheck" Content="Yuzda logoning o'z ranglari" Margin="0,6,0,0"
-                                  Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                        <TextBlock x:Name="LetterDetailsHeader" Style="{StaticResource SectionTitle}" Text="Qo'shimcha"/>
+                        <StackPanel x:Name="LetterDetailsPanel"/>
                     </StackPanel>
-                </Border>
+                </ContentControl>
 
-                <!-- 3. Fon dizayni -->
-                <Border Style="{StaticResource Card}">
+                <!-- FON -->
+                <ContentControl x:Name="BackgroundPage" Style="{StaticResource Card}" Visibility="Collapsed">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="3. FON DIZAYNI"/>
-                        <ComboBox x:Name="BackgroundCombo" SelectionChanged="BackgroundCombo_SelectionChanged">
+                        <TextBlock Style="{StaticResource SectionTitle}" Margin="0,0,0,4" Text="Fon turi"/>
+                        <ComboBox x:Name="BackgroundCombo" Style="{StaticResource Select}" SelectionChanged="BackgroundCombo_SelectionChanged">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Margin="0,1">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding EnglishName}" FontSize="10.5" Foreground="#69717C"/>
-                                    </StackPanel>
+                                    <TextBlock Text="{Binding Name}" ToolTip="{Binding Description}"/>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <TextBlock x:Name="BackgroundDescription" Style="{StaticResource Hint}" Margin="0,4,0,8"/>
 
-                        <StackPanel x:Name="PatternPanel" Visibility="Collapsed" Margin="0,0,0,6">
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Gul (naqsh)"/>
-                            <ComboBox x:Name="PatternCombo" MaxDropDownHeight="420" SelectionChanged="PatternCombo_SelectionChanged">
+                        <StackPanel x:Name="PatternPanel" Visibility="Collapsed">
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="Gul"/>
+                            <ComboBox x:Name="PatternCombo" Style="{StaticResource Select}" MaxDropDownHeight="420"
+                                      SelectionChanged="PatternCombo_SelectionChanged">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" Margin="0,1">
-                                            <Border Width="48" Height="32" BorderBrush="#DDE1E7" BorderThickness="1" ClipToBounds="True">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Width="40" Height="26" CornerRadius="6" ClipToBounds="True" Margin="0,0,8,0">
                                                 <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
                                             </Border>
-                                            <StackPanel Margin="6,0,0,0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                <TextBlock Text="{Binding EnglishName}" FontSize="10.5" Foreground="#69717C"/>
-                                            </StackPanel>
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
                         </StackPanel>
 
-                        <StackPanel x:Name="LightingPanel" Visibility="Collapsed" Margin="0,0,0,6">
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Fon yoritilishi (qaysi joyi yonadi)"/>
-                            <ComboBox x:Name="BackgroundLightCombo" DisplayMemberPath="Name" SelectionChanged="Setting_Changed"/>
-                            <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0"
-                                       Text="Nur rangi — «Detallar» bo'limida. Yonishi uchun fon qalinligi kamida 4 sm."/>
+                        <StackPanel x:Name="LightingPanel" Visibility="Collapsed">
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="Fonning qayeri yonadi"/>
+                            <ComboBox x:Name="BackgroundLightCombo" Style="{StaticResource Select}" DisplayMemberPath="Name" SelectionChanged="Setting_Changed"/>
                         </StackPanel>
 
-                        <Grid>
+                        <Grid Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="44"/>
-                                <ColumnDefinition Width="34"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="86"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition/>
                                 <RowDefinition/>
                             </Grid.RowDefinitions>
                             <TextBlock Style="{StaticResource FieldLabel}" Text="Rangi"/>
-                            <Button x:Name="BackgroundButton" Grid.Column="1" Tag="Background" Style="{StaticResource Swatch}" Width="28"
-                                    Margin="0,2,6,2" ToolTip="Fon rangi" Click="ColorButton_Click"/>
-                            <TextBox x:Name="BackgroundHex" Grid.Column="2" Tag="Background" HorizontalContentAlignment="Left" TextChanged="Hex_TextChanged"/>
-                            <WrapPanel x:Name="BackgroundSwatches" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,4,0,0"/>
+                            <Button x:Name="BackgroundButton" Grid.Column="1" Tag="Background" Style="{StaticResource Swatch}" Width="32" Height="32"
+                                    Margin="0,3,6,3" ToolTip="Rang tanlash" Click="ColorButton_Click"/>
+                            <TextBox x:Name="BackgroundHex" Grid.Column="2" Tag="Background" TextChanged="Hex_TextChanged"/>
+                            <WrapPanel x:Name="BackgroundSwatches" Grid.Row="1" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,4,0,0"/>
                         </Grid>
 
-                        <CheckBox x:Name="EngravedBorderCheck" Content="Chetida o'yilgan ramka chizig'i (gravirovka)" Margin="0,6,0,0"
-                                  Visibility="Collapsed" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                        <CheckBox x:Name="EngravedBorderCheck" Content="Chetida o'yilgan chiziq" Visibility="Collapsed"
+                                  Checked="Setting_Changed" Unchecked="Setting_Changed"/>
 
-                        <CheckBox x:Name="AutoSizeCheck" IsChecked="True" Content="Avtomatik o'lcham (logo + chetdan joy)" Margin="0,6,0,2"
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="O'lchami"/>
+                        <CheckBox x:Name="AutoSizeCheck" IsChecked="True" Content="Logoga qarab avtomatik"
                                   Checked="AutoSize_Changed" Unchecked="AutoSize_Changed"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="28"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}" Text="Eni"/>
+                                <DockPanel>
+                                    <TextBlock x:Name="BackgroundWidthUnit" DockPanel.Dock="Right" Style="{StaticResource Unit}"/>
+                                    <TextBox x:Name="BackgroundWidthBox" IsEnabled="False" TextChanged="Setting_Changed"/>
+                                </DockPanel>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Style="{StaticResource Hint}" Text="Bo'yi"/>
+                                <DockPanel>
+                                    <TextBlock x:Name="BackgroundHeightUnit" DockPanel.Dock="Right" Style="{StaticResource Unit}"/>
+                                    <TextBox x:Name="BackgroundHeightBox" IsEnabled="False" TextChanged="Setting_Changed"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </Grid>
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="110"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition/>
                                 <RowDefinition/>
                                 <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
                             </Grid.RowDefinitions>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Logo atrofidagi joy"/>
+                            <DockPanel Grid.Column="1">
+                                <TextBlock x:Name="MarginUnit" DockPanel.Dock="Right" Style="{StaticResource Unit}"/>
+                                <TextBox x:Name="MarginBox" TextChanged="Setting_Changed"/>
+                            </DockPanel>
 
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Fon eni"/>
-                            <TextBox x:Name="BackgroundWidthBox" Grid.Column="1" IsEnabled="False" TextChanged="Setting_Changed"/>
-                            <TextBlock x:Name="BackgroundWidthUnit" Grid.Column="2" Style="{StaticResource Hint}" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Fon qalinligi"/>
+                            <DockPanel Grid.Row="1" Grid.Column="1">
+                                <TextBlock x:Name="BackgroundDepthUnit" DockPanel.Dock="Right" Style="{StaticResource Unit}"/>
+                                <TextBox x:Name="BackgroundDepthBox" TextChanged="Setting_Changed"/>
+                            </DockPanel>
 
-                            <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Fon bo'yi"/>
-                            <TextBox x:Name="BackgroundHeightBox" Grid.Row="1" Grid.Column="1" IsEnabled="False" TextChanged="Setting_Changed"/>
-                            <TextBlock x:Name="BackgroundHeightUnit" Grid.Row="1" Grid.Column="2" Style="{StaticResource Hint}" Margin="4,0,0,0" VerticalAlignment="Center"/>
-
-                            <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="Chetdan joy"/>
-                            <TextBox x:Name="MarginBox" Grid.Row="2" Grid.Column="1" TextChanged="Setting_Changed"/>
-                            <TextBlock x:Name="MarginUnit" Grid.Row="2" Grid.Column="2" Style="{StaticResource Hint}" Margin="4,0,0,0" VerticalAlignment="Center"/>
-
-                            <TextBlock Grid.Row="3" Style="{StaticResource FieldLabel}" Text="Fon qalinligi"/>
-                            <TextBox x:Name="BackgroundDepthBox" Grid.Row="3" Grid.Column="1" TextChanged="Setting_Changed"/>
-                            <TextBlock x:Name="BackgroundDepthUnit" Grid.Row="3" Grid.Column="2" Style="{StaticResource Hint}" Margin="4,0,0,0" VerticalAlignment="Center"/>
-
-                            <TextBlock Grid.Row="4" Style="{StaticResource FieldLabel}" Text="Joylashuvi"/>
-                            <ComboBox x:Name="AlignCombo" Grid.Row="4" Grid.Column="1" DisplayMemberPath="Name" SelectionChanged="Setting_Changed"/>
+                            <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="Logo joyi"/>
+                            <ComboBox x:Name="AlignCombo" Grid.Row="2" Grid.Column="1" Style="{StaticResource Select}"
+                                      DisplayMemberPath="Name" SelectionChanged="Setting_Changed"/>
                         </Grid>
-                    </StackPanel>
-                </Border>
 
-                <!-- 4. Detallar: rang va o'lcham (ro'yxat dizaynga qarab koddan quriladi) -->
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="4. DETALLAR: RANG VA O'LCHAM"/>
-                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,4"
-                                   Text="Bo'sh maydon — dizaynning o'z qiymati (kulrang yozuv). ↺ — asl holiga qaytarish."/>
-                        <StackPanel x:Name="DetailsPanel"/>
+                        <TextBlock x:Name="BackgroundDetailsHeader" Style="{StaticResource SectionTitle}" Text="Qo'shimcha"/>
+                        <StackPanel x:Name="BackgroundDetailsPanel"/>
                     </StackPanel>
-                </Border>
+                </ContentControl>
 
-                <!-- 5. Corel -->
-                <Border Style="{StaticResource Card}">
+                <!-- JOYIDA: logo bino rasmi ustida -->
+                <ContentControl x:Name="PhotoPage" Style="{StaticResource Card}" Visibility="Collapsed">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="5. COREL CHIZMASI"/>
+                        <Button x:Name="PhotoPickButton" Click="PhotoPickButton_Click" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Height="96" CornerRadius="14" Background="{StaticResource FieldBrush}"
+                                            BorderBrush="#C9CDD4" BorderThickness="1.5">
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <TextBlock Text="&#xE722;" FontFamily="Segoe MDL2 Assets" FontSize="22" HorizontalAlignment="Center"
+                                                       Foreground="{StaticResource AccentBrush}"/>
+                                            <TextBlock Text="Bino rasmini tanlang" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                            <TextBlock Text="JPG yoki PNG" Style="{StaticResource Hint}" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <StackPanel x:Name="PhotoInfoPanel" Visibility="Collapsed">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="56"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Width="56" Height="42" CornerRadius="10" ClipToBounds="True">
+                                    <Border.Background>
+                                        <ImageBrush x:Name="PhotoThumb" Stretch="UniformToFill"/>
+                                    </Border.Background>
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="10,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="PhotoNameText" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+                                    <TextBlock Style="{StaticResource Hint}" Text="Suring · g'ildirak — kattalik"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                    <Button Style="{StaticResource SmallRoundButton}" Content="&#xE70F;" ToolTip="Boshqa rasm" Margin="0,0,6,0"
+                                            Click="PhotoPickButton_Click"/>
+                                    <Button Style="{StaticResource SmallRoundButton}" Content="&#xE711;" ToolTip="Rasmni olib tashlash"
+                                            Click="PhotoClearButton_Click"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="40"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Kattaligi"/>
+                                <Slider x:Name="PhotoSizeSlider" Grid.Column="1" Minimum="5" Maximum="100" Value="45" VerticalAlignment="Center"
+                                        IsMoveToPointEnabled="True" ValueChanged="PhotoSizeSlider_ValueChanged"/>
+                                <TextBlock x:Name="PhotoSizeText" Grid.Column="2" Style="{StaticResource Unit}" HorizontalAlignment="Right" Text="45%"/>
+                            </Grid>
+                            <CheckBox x:Name="PhotoDrawCheck" IsChecked="True" Content="Corel'da ham chizish (kunduzi + kechasi)"
+                                      Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                                   Text="Logo rasm ustida kunduzi va kechasi ko'rinadi. ChatGPT ham shu joyda real qilib chizadi."/>
+                    </StackPanel>
+                </ContentControl>
+
+                <!-- CHATGPT -->
+                <ContentControl x:Name="AiPage" Style="{StaticResource Card}" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Margin="0,0,0,4" Text="OpenAI API kalit"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Masshtab"/>
-                            <ComboBox x:Name="ScaleCombo" Grid.Column="1" ItemStringFormat="1:{0}" SelectionChanged="Setting_Changed"/>
+                            <PasswordBox x:Name="ApiKeyBox" Margin="0,3,6,3"/>
+                            <Button x:Name="SaveKeyButton" Grid.Column="1" Style="{StaticResource SecondaryButton}" Content="Saqlash"
+                                    Click="SaveKeyButton_Click"/>
                         </Grid>
-                        <CheckBox x:Name="NightCheck" IsChecked="True" Content="Kechki ko'rinish" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
-                        <CheckBox x:Name="SectionCheck" IsChecked="True" Content="Yon kesim (sxema)" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
-                        <CheckBox x:Name="DimensionsCheck" IsChecked="True" Content="O'lcham chiziqlari" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
-                        <CheckBox x:Name="NewPageCheck" IsChecked="True" Content="Yangi sahifada" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- 6. ChatGPT -->
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="6. CHATGPT — REAL KO'RINISH"/>
-                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,4"
-                                   Text="Har kim o'z OpenAI API kalitini ulaydi. Kalit shu kompyuterda shifrlangan holda saqlanadi."/>
                         <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <PasswordBox x:Name="ApiKeyBox" Padding="4,3" Margin="0,2,6,2" VerticalContentAlignment="Center"/>
-                            <Button x:Name="SaveKeyButton" Grid.Column="1" Style="{StaticResource SecondaryButton}" Padding="8,3"
-                                    Content="Saqlash" Click="SaveKeyButton_Click"/>
-                        </Grid>
-                        <Grid Margin="0,2,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock VerticalAlignment="Center">
-                                <Hyperlink x:Name="ApiKeyLink" RequestNavigate="Link_RequestNavigate">API kalit olish →</Hyperlink>
+                                <Hyperlink x:Name="ApiKeyLink" RequestNavigate="Link_RequestNavigate">Kalit olish →</Hyperlink>
                             </TextBlock>
-                            <Button x:Name="CheckKeyButton" Grid.Column="1" Style="{StaticResource SecondaryButton}" Padding="8,3"
-                                    Content="Tekshirish" Click="CheckKeyButton_Click"/>
+                            <Button x:Name="CheckKeyButton" Grid.Column="1" Style="{StaticResource SecondaryButton}" Content="Tekshirish"
+                                    Click="CheckKeyButton_Click"/>
                         </Grid>
-                        <TextBlock x:Name="KeyStatusText" Style="{StaticResource Hint}" Margin="0,2,0,6"/>
+                        <TextBlock x:Name="KeyStatusText" Style="{StaticResource Hint}"/>
 
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="Dizayn manbai"/>
-                        <RadioButton x:Name="SourceLastRadio" Content="Oxirgi chizilgan dizayn (avtomatik)" IsChecked="True" Margin="0,3" Checked="Setting_Changed"/>
-                        <RadioButton x:Name="SourceSelectionRadio" Content="Corelda tanlangan obyekt" Margin="0,3" Checked="Setting_Changed"/>
-
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="Joy rasmi (bino fasadi, ixtiyoriy)" Margin="0,6,0,0"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Button x:Name="PickPhotoButton" Style="{StaticResource SecondaryButton}" Padding="8,3"
-                                    Content="Rasm tanlash..." Click="PickPhotoButton_Click"/>
-                            <TextBlock x:Name="PhotoText" Grid.Column="1" Style="{StaticResource Hint}" Margin="6,0"
-                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="tanlanmagan"/>
-                            <Button x:Name="ClearPhotoButton" Grid.Column="2" Style="{StaticResource SecondaryButton}" Padding="8,3"
-                                    Content="×" ToolTip="Rasmni olib tashlash" Click="ClearPhotoButton_Click"/>
-                        </Grid>
-
-                        <Grid Margin="0,6,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="So'rov (prompt)"/>
-                            <Button Grid.Column="1" Style="{StaticResource SecondaryButton}" Padding="6,1" Margin="0"
-                                    Content="Standart" FontSize="11" Click="ResetPromptButton_Click"/>
-                        </Grid>
-                        <TextBox x:Name="PromptBox" Height="88" TextWrapping="Wrap" AcceptsReturn="True" TextChanged="Setting_Changed"
-                                 VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Left" VerticalContentAlignment="Top"/>
-                        <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0"
-                                   Text="Plagin dizayni tavsifi (harf, fon, gul, ranglar, yoritilish, o'lcham) so'rovga avtomatik qo'shiladi."/>
-                        <Expander Header="Yuboriladigan to'liq so'rovni ko'rish" Margin="0,4,0,0" Foreground="{StaticResource TextBrush}">
-                            <TextBox x:Name="FullPromptBox" IsReadOnly="True" TextWrapping="Wrap" Height="180" FontSize="11"
-                                     VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Left" VerticalContentAlignment="Top"/>
-                        </Expander>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                            <CheckBox x:Name="AiDayCheck" Content="Kunduzi" IsChecked="True" Margin="0,0,14,0"/>
-                            <CheckBox x:Name="AiNightCheck" Content="Kechasi" IsChecked="True"/>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Qaysi rasmlar"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ToggleButton x:Name="AiDayCheck" Style="{StaticResource Chip}" Tag="&#xE706;" Content="Kunduzi" IsChecked="True"/>
+                            <ToggleButton x:Name="AiNightCheck" Style="{StaticResource Chip}" Tag="&#xE708;" Content="Kechasi" IsChecked="True"/>
                         </StackPanel>
+                        <TextBlock x:Name="AiPhotoText" Style="{StaticResource Hint}"/>
 
-                        <Grid Margin="0,4,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
-                            </Grid.RowDefinitions>
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Model"/>
-                            <ComboBox x:Name="ModelCombo" Grid.Column="1" IsEditable="True"/>
-                            <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Sifat"/>
-                            <ComboBox x:Name="QualityCombo" Grid.Row="1" Grid.Column="1"/>
-                            <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="Rasm o'lchami"/>
-                            <ComboBox x:Name="SizeCombo" Grid.Row="2" Grid.Column="1"/>
-                        </Grid>
-
-                        <CheckBox x:Name="AutoSendCheck" Content="Dizayn chizilgach avtomatik yuborish" Margin="0,6,0,2"/>
-
-                        <Button x:Name="GenerateButton" Style="{StaticResource PrimaryButton}" Margin="0,6,0,0"
-                                Content="CHATGPT: REAL KO'RINISH" Click="GenerateButton_Click"/>
+                        <Button x:Name="GenerateButton" Style="{StaticResource PrimaryButton}" Margin="0,10,0,0"
+                                Content="Real rasm yaratish" Click="GenerateButton_Click"/>
                         <Button x:Name="CancelAiButton" Style="{StaticResource SecondaryButton}" Visibility="Collapsed"
                                 Content="Bekor qilish" Click="CancelAiButton_Click"/>
-                        <ProgressBar x:Name="AiProgress" Height="4" Margin="0,4,0,0" IsIndeterminate="True" Visibility="Collapsed"/>
-                        <TextBlock x:Name="AiStatusText" Style="{StaticResource Hint}" Margin="0,4,0,0"/>
+                        <ProgressBar x:Name="AiProgress" Height="4" Margin="0,6,0,0" IsIndeterminate="True" Visibility="Collapsed"
+                                     Foreground="{StaticResource AccentBrush}" Background="{StaticResource ChipBrush}" BorderThickness="0"/>
+                        <TextBlock x:Name="AiStatusText" Style="{StaticResource Hint}" Margin="0,6,0,0"/>
 
-                        <UniformGrid x:Name="AiResults" Columns="2" Margin="0,6,0,0" Visibility="Collapsed">
-                            <StackPanel Margin="0,0,3,0">
-                                <Border Height="90" Background="{StaticResource CheckerBrush}" CornerRadius="4">
+                        <UniformGrid x:Name="AiResults" Columns="2" Margin="0,8,0,0" Visibility="Collapsed">
+                            <StackPanel Margin="0,0,4,0">
+                                <Border Height="90" CornerRadius="10" Background="{StaticResource CheckerBrush}">
                                     <Image x:Name="AiDayImage" Stretch="Uniform"/>
                                 </Border>
                                 <TextBlock Style="{StaticResource Hint}" Text="Kunduzi" HorizontalAlignment="Center"/>
                             </StackPanel>
-                            <StackPanel Margin="3,0,0,0">
-                                <Border Height="90" Background="{StaticResource NightBrush}" CornerRadius="4">
+                            <StackPanel Margin="4,0,0,0">
+                                <Border Height="90" CornerRadius="10" Background="{StaticResource NightBrush}">
                                     <Image x:Name="AiNightImage" Stretch="Uniform"/>
                                 </Border>
                                 <TextBlock Style="{StaticResource Hint}" Text="Kechasi" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </UniformGrid>
                         <Button x:Name="OpenFolderButton" Style="{StaticResource SecondaryButton}" Visibility="Collapsed"
-                                Content="Rasmlar papkasini ochish" Click="OpenFolderButton_Click"/>
+                                Content="Rasmlar papkasi" Click="OpenFolderButton_Click"/>
+
+                        <Expander Header="Qo'shimcha">
+                            <StackPanel Margin="0,6,0,0">
+                                <CheckBox x:Name="SendSelectionCheck" Content="Corel'da belgilanganini yuborish" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                                <CheckBox x:Name="AutoSendCheck" Content="Chizilgach o'zi yuborsin"/>
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="150"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Model"/>
+                                    <ComboBox x:Name="ModelCombo" Grid.Column="1" IsEditable="True" Margin="0,3"/>
+                                    <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Sifat"/>
+                                    <ComboBox x:Name="QualityCombo" Grid.Row="1" Grid.Column="1" Style="{StaticResource Select}"/>
+                                    <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="Rasm o'lchami"/>
+                                    <ComboBox x:Name="SizeCombo" Grid.Row="2" Grid.Column="1" Style="{StaticResource Select}"/>
+                                </Grid>
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Topshiriq matni"/>
+                                    <Button Grid.Column="1" Style="{StaticResource SecondaryButton}" Padding="10,3" Content="Asl holi"
+                                            FontSize="11.5" Click="ResetPromptButton_Click"/>
+                                </Grid>
+                                <TextBox x:Name="PromptBox" Height="88" TextWrapping="Wrap" AcceptsReturn="True" VerticalContentAlignment="Top"
+                                         VerticalScrollBarVisibility="Auto" TextChanged="Setting_Changed"/>
+                                <Expander Header="Yuboriladigan to'liq matn">
+                                    <TextBox x:Name="FullPromptBox" IsReadOnly="True" TextWrapping="Wrap" Height="180" FontSize="11"
+                                             VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"/>
+                                </Expander>
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
-                </Border>
+                </ContentControl>
 
             </StackPanel>
         </ScrollViewer>
