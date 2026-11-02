@@ -24,7 +24,7 @@
       <!-- Asosiy menyudagi "Rasxod" bo'limi -->
       <itemData guid="1b75cd41-3411-472d-9769-42b911e4ce25" noBmpOnMenu="true"
                 type="flyout"
-                dynamicCategory="597f7de1-9e1e-4f03-8bf9-e53ea72a0687"
+                dynamicCategory="2cc24a3e-fe24-4708-9a74-9c75406eebcd"
                 userCaption="Rasxod"
                 enable="true"
                 flyoutBarRef="0ef9091e-ad10-4e8a-ac32-293b11f50bb8"/>
@@ -33,7 +33,7 @@
       <itemData guid="3edbfa85-fa48-42c6-8284-cab530e86c32" noBmpOnMenu="true"
                 type="checkButton"
                 check="*Docker('531aa87c-db8d-43e7-a91e-4b4e0e77e7ea')"
-                dynamicCategory="597f7de1-9e1e-4f03-8bf9-e53ea72a0687"
+                dynamicCategory="2cc24a3e-fe24-4708-9a74-9c75406eebcd"
                 userCaption="Reklama Rasxod"
                 enable="true"/>
 
