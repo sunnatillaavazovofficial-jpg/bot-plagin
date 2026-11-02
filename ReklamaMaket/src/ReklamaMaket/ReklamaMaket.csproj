@@ -22,8 +22,10 @@
   <Import Project="CorelPath.local.props" Condition="Exists('CorelPath.local.props')" />
   <PropertyGroup>
     <CorelPath Condition="'$(CorelPath)' == ''">C:\Program Files\Corel\CorelDRAW Graphics Suite 2021\Programs64\</CorelPath>
-    <CorelPath Condition="!HasTrailingSlash('$(CorelPath)')">$(CorelPath)\</CorelPath>
-    <VGCorePath Condition="'$(VGCorePath)' == ''">$(CorelPath)Assemblies\Corel.Interop.VGCore.dll</VGCorePath>
+    <!-- Buyruq qatoridan berilgan CorelPath'ni o'zgartirib bo'lmaydi, shuning uchun oxiridagi "\" alohida xossada qo'shiladi -->
+    <CorelDir>$(CorelPath)</CorelDir>
+    <CorelDir Condition="!HasTrailingSlash('$(CorelDir)')">$(CorelDir)\</CorelDir>
+    <VGCorePath Condition="'$(VGCorePath)' == ''">$(CorelDir)Assemblies\Corel.Interop.VGCore.dll</VGCorePath>
   </PropertyGroup>
 
   <ItemGroup>
