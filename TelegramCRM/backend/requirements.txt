@@ -1,0 +1,11 @@
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+telethon==1.45.0
+SQLAlchemy[asyncio]==2.1.6
+aiosqlite==0.22.1
+alembic==1.20.1
+cryptography==50.0.2
+PyJWT==2.15.1
+python-multipart==0.0.33
+httpx==0.28.1
+tzdata

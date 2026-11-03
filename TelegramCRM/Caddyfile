@@ -1,0 +1,12 @@
+{$DOMAIN} {
+	encode gzip
+	request_body {
+		max_size 2GB
+	}
+	header {
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+		-Server
+	}
+	reverse_proxy app:8000
+}
