@@ -16,6 +16,7 @@ using ReklamaMaket.Ai;
 using ReklamaMaket.Core;
 using ReklamaMaket.Designs;
 using ReklamaMaket.Rendering;
+using ReklamaMaket.Ui;
 using corel = Corel.Interop.VGCore;
 using Forms = System.Windows.Forms;
 
@@ -187,6 +188,7 @@ namespace ReklamaMaket
                 ReturnColorLabel.Visibility = returnRow;
                 ReturnButton.Visibility = returnRow;
                 ReturnHex.Visibility = returnRow;
+                ReturnPipette.Visibility = returnRow;
                 KeepColorsCheck.IsEnabled = !style.IsCut || style.Cut == CutMode.RoutedLit;
 
                 if (style.IsCut && BackgroundCombo.SelectedItem is BackgroundStyle background && !background.CanBeCut)
@@ -247,6 +249,9 @@ namespace ReklamaMaket
         }
 
         // ================================================================ sozlamalarni o'qish/yozish
+
+        /// <summary>Corel'dan olingan o'lcham: 100 mm dan kattasi butun mm, kichigi 0,1 mm aniqlikda.</summary>
+        private static double RoundMm(double mm) => Math.Round(mm, mm < 100 ? 1 : 0);
 
         private void WriteLength(TextBox box, double mm) => box.Text = Num.Format(Math.Round(unit.FromMm(mm), 3));
 
@@ -370,6 +375,10 @@ namespace ReklamaMaket
             bool night = NightRadio.IsChecked == true;
             SyncDetails(settings);
             photoPreview = null;
+            PreviewHost.Height = PhotoMode ? 250 : 190; // rasm ustida surish qulay bo'lishi uchun kattaroq
+            AiSourceHint.Text = AiFromSelection.IsChecked == true
+                ? "Corel'da tayyor dizaynni belgilang — ChatGPT uni real qilib ko'rsatadi."
+                : "Plaginda «Corel'da chizish» bilan chizilgan oxirgi dizayn yuboriladi.";
             try
             {
                 if (PhotoMode)
@@ -414,7 +423,13 @@ namespace ReklamaMaket
         /// <summary>ChatGPT'ga ketadigan to'liq so'rov (panelda ko'rish uchun).</summary>
         private void UpdateFullPrompt(SignSettings settings, RuleResult rules)
         {
-            bool fromDrawing = SendSelectionCheck.IsChecked != true;
+            if (AiFromSelection.IsChecked == true)
+            {
+                FullPromptBox.Text = "— KUNDUZI —\n" + PromptBuilder.BuildForSelection(PromptBox.Text, false, settings.HasPhoto) +
+                                     "\n\n— KECHASI —\n" + PromptBuilder.BuildForSelection(PromptBox.Text, true, settings.HasPhoto);
+                return;
+            }
+            bool fromDrawing = true;
             bool nightReference = fromDrawing && settings.DrawNight;
             LocationMode location = !settings.HasPhoto ? LocationMode.None
                 : fromDrawing && settings.DrawOnPhoto ? LocationMode.Composite
@@ -444,8 +459,12 @@ namespace ReklamaMaket
             AiPage.Visibility = TabAi.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 
             // "Joyida" bo'limiga o'tilganda ko'rinish ham rasm ustiga o'tadi
-            if (sender == TabPhoto && photoBitmap != null)
-                PhotoViewToggle.IsChecked = true;
+            if (sender == TabPhoto)
+            {
+                PhotoPage.Focus(); // Ctrl+V shu bo'limga kelsin
+                if (photoBitmap != null)
+                    PhotoViewToggle.IsChecked = true;
+            }
         }
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e) => SettingsPopup.IsOpen = true;
@@ -648,6 +667,32 @@ namespace ReklamaMaket
             ScheduleRefresh();
         }
 
+        private void Pipette_Click(object sender, RoutedEventArgs e)
+        {
+            string target = (string)((FrameworkElement)sender).Tag;
+            Color? picked = PickScreenColor();
+            if (picked == null)
+                return;
+
+            SetColor(target, picked.Value);
+            UpdateColorControls();
+            ScheduleRefresh();
+        }
+
+        /// <summary>Pipetka: ekranning istalgan joyidan (Corel, rasm, brauzer) rang olish.</summary>
+        private Color? PickScreenColor()
+        {
+            try
+            {
+                return EyeDropper.Pick();
+            }
+            catch (Exception ex)
+            {
+                SetStatus("Pipetka ishlamadi: " + ex.Message, true);
+                return null;
+            }
+        }
+
         private static bool PickColor(ref Color color)
         {
             using (var dialog = new Forms.ColorDialog
@@ -670,8 +715,7 @@ namespace ReklamaMaket
         {
             RunCorelAction(() =>
             {
-                CaptureLogo();
-                SetStatus("Logo olindi. Endi «Harf» va «Fon» bo'limlarida dizaynni tanlang.", false);
+                SetStatus(CaptureLogo(), false);
                 return true;
             });
         }
@@ -705,6 +749,7 @@ namespace ReklamaMaket
                 lastResult = new ChannelLetterRenderer(corelApp).Draw(doc, settings, logo);
                 SetStatus(string.Format("Tayyor: \"{0}\" dizayni {1} chizildi. Bekor qilish — Ctrl+Z.",
                     settings.Letter.Name, settings.NewPage ? "yangi sahifada" : "joriy sahifada"), false);
+                AiFromDrawing.IsChecked = true; // endi ChatGPT shu chizilgan dizaynni oladi
                 return true;
             });
 
@@ -712,23 +757,59 @@ namespace ReklamaMaket
                 await GenerateAsync();
         }
 
-        private void CaptureLogo()
+        /// <summary>
+        /// Logoni oladi: o'lchami va rangi logoning o'zidan; orqasida bir xil rangli katak bo'lsa —
+        /// u fon qilib olinadi (rangi va o'lchami bilan). Holat matnini qaytaradi.
+        /// </summary>
+        private string CaptureLogo()
         {
             logo = corelService.CaptureSelection();
             logoAspect = logo.WidthMm / logo.HeightMm;
             LogoImage.Source = logo.Preview;
-            LogoInfoText.Text = string.Format("Logo olindi\n{0} ta obyekt · {1}×{2} mm",
-                logo.Count, Num.Format(Math.Round(logo.WidthMm, 1)), Num.Format(Math.Round(logo.HeightMm, 1)));
 
-            // Bo'yi saqlanadi, eni logo proporsiyasi bo'yicha hisoblanadi
-            if (Num.TryParse(LogoHeightBox.Text, out double height) && height > 0)
+            bool previous = suppressEvents;
+            suppressEvents = true;
+            try
             {
-                bool previous = suppressEvents;
-                suppressEvents = true;
-                LogoWidthBox.Text = Num.Format(Math.Round(height * logoAspect, 2));
+                WriteLength(LogoWidthBox, RoundMm(logo.WidthMm));
+                WriteLength(LogoHeightBox, RoundMm(logo.HeightMm));
+
+                if (logo.Colors.Count > 0)
+                {
+                    faceColor = logo.Colors[0];
+                    KeepColorsCheck.IsChecked = logo.Colors.Count > 1; // ko'p rangli logo — o'z ranglari bilan
+                }
+
+                if (logo.Backdrop != null)
+                {
+                    if (BackgroundCombo.SelectedItem is BackgroundStyle current && current.Kind == BackgroundKind.Wall)
+                    {
+                        BackgroundStyle panel = BackgroundStyles.All.First(b => b.Kind == BackgroundKind.Panel);
+                        BackgroundCombo.SelectedItem = panel;
+                        ApplyBackgroundStyle(panel);
+                    }
+                    backgroundColor = logo.Backdrop.Color;
+                    AutoSizeCheck.IsChecked = false;
+                    WriteLength(BackgroundWidthBox, RoundMm(logo.Backdrop.WidthMm));
+                    WriteLength(BackgroundHeightBox, RoundMm(logo.Backdrop.HeightMm));
+                    UpdateBackgroundSizeEnabled();
+                }
+                UpdateColorControls();
+            }
+            finally
+            {
                 suppressEvents = previous;
             }
+
+            LogoInfoText.Text = string.Format("Logo olindi · {0}×{1} mm", Num.Format(Math.Round(logo.WidthMm, 1)), Num.Format(Math.Round(logo.HeightMm, 1))) +
+                (logo.Backdrop != null
+                    ? string.Format("\nFon (katak): {0}×{1} mm", Num.Format(Math.Round(logo.Backdrop.WidthMm, 1)), Num.Format(Math.Round(logo.Backdrop.HeightMm, 1)))
+                    : string.Empty);
             RefreshPreview();
+
+            return logo.Backdrop != null
+                ? "Logo olindi: o'lcham va rang logoning o'zidan, orqadagi katak fon qilib olindi."
+                : "Logo olindi: o'lcham va rang logoning o'zidan olindi.";
         }
 
         private static bool ConfirmWarnings(RuleResult rules)
@@ -897,19 +978,36 @@ namespace ReklamaMaket
                 return;
             }
 
-            SignSettings settings = ReadSettings(out string error);
-            if (settings == null)
+            // Manba: Corel'da belgilangan tayyor dizayn yoki plagin chizgan oxirgi dizayn
+            bool fromSelection = AiFromSelection.IsChecked == true;
+            if (!fromSelection && lastResult?.DayView == null)
             {
-                SetAiStatus(error, true);
-                return;
+                if (!corelService.HasSelection())
+                {
+                    SetAiStatus("Avval «Corel'da chizish» tugmasini bosing yoki Corel'da tayyor dizaynni belgilang.", true);
+                    return;
+                }
+                fromSelection = true;
             }
-            RuleResult rules = SignRules.Check(settings);
+
+            SignSettings settings = null;
+            RuleResult rules = null;
+            if (!fromSelection)
+            {
+                settings = ReadSettings(out string error);
+                if (settings == null)
+                {
+                    SetAiStatus(error, true);
+                    return;
+                }
+                rules = SignRules.Check(settings);
+            }
             SaveAiSettings();
 
             // Bino rasmi ustidagi ko'rinish chizilgan bo'lsa — ChatGPT logoni aynan shu joyda real qiladi
-            bool fromSelection = SendSelectionCheck.IsChecked == true;
+            string photo = photoBitmap != null ? photoPath : null;
             bool composite = !fromSelection && lastResult?.PhotoDayView != null;
-            string rawPhoto = !composite && settings.HasPhoto ? settings.PhotoPath : null;
+            string rawPhoto = !composite ? photo : null;
 
             var exported = new List<string>();
             string designFile;
@@ -965,7 +1063,14 @@ namespace ReklamaMaket
                     {
                         List<string> images;
                         string prompt;
-                        if (composite)
+                        if (fromSelection)
+                        {
+                            images = new List<string> { designFile };
+                            if (photo != null)
+                                images.Add(photo);
+                            prompt = PromptBuilder.BuildForSelection(PromptBox.Text, false, photo != null);
+                        }
+                        else if (composite)
                         {
                             images = new List<string> { photoDayFile, designFile };
                             prompt = PromptBuilder.Build(settings, rules, PromptBox.Text, false, false, LocationMode.Composite);
@@ -983,7 +1088,14 @@ namespace ReklamaMaket
                     {
                         List<string> images;
                         string prompt;
-                        if (composite && photoNightFile != null)
+                        if (fromSelection)
+                        {
+                            images = new List<string> { designFile };
+                            if (photo != null)
+                                images.Add(photo);
+                            prompt = PromptBuilder.BuildForSelection(PromptBox.Text, true, photo != null);
+                        }
+                        else if (composite && photoNightFile != null)
                         {
                             images = new List<string> { photoNightFile, nightFile ?? designFile };
                             prompt = PromptBuilder.Build(settings, rules, PromptBox.Text, true, nightFile != null, LocationMode.Composite);
@@ -993,10 +1105,10 @@ namespace ReklamaMaket
                             images = new List<string> { designFile };
                             if (nightFile != null)
                                 images.Add(nightFile);
-                            if (settings.HasPhoto)
-                                images.Add(settings.PhotoPath);
+                            if (photo != null)
+                                images.Add(photo);
                             prompt = PromptBuilder.Build(settings, rules, PromptBox.Text, true, nightFile != null,
-                                settings.HasPhoto ? LocationMode.Photo : LocationMode.None);
+                                photo != null ? LocationMode.Photo : LocationMode.None);
                         }
                         nightTask = client.EditImageAsync(images, prompt, model, size, quality, aiCancel.Token);
                     }
@@ -1024,7 +1136,8 @@ namespace ReklamaMaket
                 string imported = string.Empty;
                 try
                 {
-                    corelService.ImportImages(files, labels, settings.Letter.Name + " — ChatGPT ko'rinish", settings.NewPage);
+                    string title = fromSelection ? "Tayyor dizayn" : settings.Letter.Name;
+                    corelService.ImportImages(files, labels, title + " — ChatGPT ko'rinish", NewPageCheck.IsChecked == true);
                     imported = " va Corelga qo'shildi";
                 }
                 catch (Exception ex)

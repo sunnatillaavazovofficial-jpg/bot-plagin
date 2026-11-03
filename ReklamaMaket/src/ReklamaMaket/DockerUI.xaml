@@ -4,7 +4,8 @@
              MinWidth="280"
              FontFamily="Segoe UI"
              FontSize="12.5"
-             Unloaded="DockerUI_Unloaded">
+             Unloaded="DockerUI_Unloaded"
+             PreviewKeyDown="DockerUI_PreviewKeyDown">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -20,6 +21,10 @@
         <StackPanel DockPanel.Dock="Top" Margin="16,14,16,4">
             <TextBlock Text="CorelDRAW · tashqi reklama" Foreground="{StaticResource MutedBrush}"/>
             <TextBlock Style="{StaticResource Title}" Text="Reklama Maket"/>
+            <TextBlock FontSize="12" Margin="1,1,0,0">
+                <Run Text="by" Foreground="{StaticResource MutedBrush}"/>
+                <Run Text="Sunnatilla Designer" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/>
+            </TextBlock>
         </StackPanel>
 
         <!-- Pastki panel: sozlamalar · chizish · ChatGPT -->
@@ -56,10 +61,12 @@
                             <CheckBox x:Name="DimensionsCheck" IsChecked="True" Content="O'lchamlar" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
                             <CheckBox x:Name="NewPageCheck" IsChecked="True" Content="Yangi sahifada" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
 
-                            <TextBlock Text="Litsenziya" FontWeight="SemiBold" Margin="0,10,0,2"/>
-                            <TextBlock x:Name="LicenseInfoText" Style="{StaticResource Hint}"/>
-                            <Button Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Content="Kalitni almashtirish"
-                                    Click="ChangeLicense_Click"/>
+                            <StackPanel x:Name="LicenseSection">
+                                <TextBlock Text="Litsenziya" FontWeight="SemiBold" Margin="0,10,0,2"/>
+                                <TextBlock x:Name="LicenseInfoText" Style="{StaticResource Hint}"/>
+                                <Button Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Content="Kalitni almashtirish"
+                                        Click="ChangeLicense_Click"/>
+                            </StackPanel>
                         </StackPanel>
                     </ContentControl>
                 </Popup>
@@ -88,6 +95,7 @@
                                   Checked="Setting_Changed" Unchecked="Setting_Changed"/>
                 </Grid>
                 <Border x:Name="PreviewHost" Height="190" CornerRadius="12" Padding="6" Background="{StaticResource CheckerBrush}"
+                        AllowDrop="True" DragOver="Photo_DragOver" Drop="Photo_Drop"
                         MouseLeftButtonDown="Preview_MouseDown" MouseMove="Preview_MouseMove"
                         MouseLeftButtonUp="Preview_MouseUp" MouseWheel="Preview_MouseWheel">
                     <Viewbox x:Name="PreviewBox" Stretch="Uniform"/>
@@ -199,6 +207,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="86"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition/>
@@ -211,18 +220,21 @@
                             <Button x:Name="FaceButton" Grid.Column="1" Tag="Face" Style="{StaticResource Swatch}" Width="32" Height="32"
                                     Margin="0,3,6,3" ToolTip="Rang tanlash" Click="ColorButton_Click"/>
                             <TextBox x:Name="FaceHex" Grid.Column="2" Tag="Face" TextChanged="Hex_TextChanged"/>
+                            <Button Grid.Column="3" Tag="Face" Style="{StaticResource PipetteButton}" Click="Pipette_Click"/>
 
                             <TextBlock x:Name="ReturnColorLabel" Grid.Row="1" Style="{StaticResource FieldLabel}" Text="Yoni"/>
                             <Button x:Name="ReturnButton" Grid.Row="1" Grid.Column="1" Tag="Return" Style="{StaticResource Swatch}" Width="32" Height="32"
                                     Margin="0,3,6,3" ToolTip="Rang tanlash" Click="ColorButton_Click"/>
                             <TextBox x:Name="ReturnHex" Grid.Row="1" Grid.Column="2" Tag="Return" TextChanged="Hex_TextChanged"/>
+                            <Button x:Name="ReturnPipette" Grid.Row="1" Grid.Column="3" Tag="Return" Style="{StaticResource PipetteButton}" Click="Pipette_Click"/>
 
                             <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="Chiroq"/>
                             <Button x:Name="LightButton" Grid.Row="2" Grid.Column="1" Tag="Light" Style="{StaticResource Swatch}" Width="32" Height="32"
                                     Margin="0,3,6,3" ToolTip="Rang tanlash" Click="ColorButton_Click"/>
                             <TextBox x:Name="LightHex" Grid.Row="2" Grid.Column="2" Tag="Light" TextChanged="Hex_TextChanged"/>
+                            <Button Grid.Row="2" Grid.Column="3" Tag="Light" Style="{StaticResource PipetteButton}" Click="Pipette_Click"/>
 
-                            <WrapPanel x:Name="LightSwatches" Grid.Row="3" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,4,0,0"/>
+                            <WrapPanel x:Name="LightSwatches" Grid.Row="3" Grid.ColumnSpan="4" HorizontalAlignment="Right" Margin="0,4,0,0"/>
                         </Grid>
                         <CheckBox x:Name="KeepColorsCheck" Content="Logoning o'z ranglari" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
 
@@ -270,6 +282,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="86"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition/>
@@ -279,7 +292,8 @@
                             <Button x:Name="BackgroundButton" Grid.Column="1" Tag="Background" Style="{StaticResource Swatch}" Width="32" Height="32"
                                     Margin="0,3,6,3" ToolTip="Rang tanlash" Click="ColorButton_Click"/>
                             <TextBox x:Name="BackgroundHex" Grid.Column="2" Tag="Background" TextChanged="Hex_TextChanged"/>
-                            <WrapPanel x:Name="BackgroundSwatches" Grid.Row="1" Grid.ColumnSpan="3" HorizontalAlignment="Right" Margin="0,4,0,0"/>
+                            <Button Grid.Column="3" Tag="Background" Style="{StaticResource PipetteButton}" Click="Pipette_Click"/>
+                            <WrapPanel x:Name="BackgroundSwatches" Grid.Row="1" Grid.ColumnSpan="4" HorizontalAlignment="Right" Margin="0,4,0,0"/>
                         </Grid>
 
                         <CheckBox x:Name="EngravedBorderCheck" Content="Chetida o'yilgan chiziq" Visibility="Collapsed"
@@ -342,7 +356,8 @@
                 </ContentControl>
 
                 <!-- JOYIDA: logo bino rasmi ustida -->
-                <ContentControl x:Name="PhotoPage" Style="{StaticResource Card}" Visibility="Collapsed">
+                <ContentControl x:Name="PhotoPage" Style="{StaticResource Card}" Visibility="Collapsed" Focusable="True"
+                                FocusVisualStyle="{x:Null}" AllowDrop="True" DragOver="Photo_DragOver" Drop="Photo_Drop">
                     <StackPanel>
                         <Button x:Name="PhotoPickButton" Click="PhotoPickButton_Click" Cursor="Hand">
                             <Button.Template>
@@ -353,7 +368,7 @@
                                             <TextBlock Text="&#xE722;" FontFamily="Segoe MDL2 Assets" FontSize="22" HorizontalAlignment="Center"
                                                        Foreground="{StaticResource AccentBrush}"/>
                                             <TextBlock Text="Bino rasmini tanlang" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                                            <TextBlock Text="JPG yoki PNG" Style="{StaticResource Hint}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="yoki Ctrl+V · yoki rasmni shu yerga tashlang" Style="{StaticResource Hint}" HorizontalAlignment="Center"/>
                                         </StackPanel>
                                     </Border>
                                     <ControlTemplate.Triggers>
@@ -364,6 +379,8 @@
                                 </ControlTemplate>
                             </Button.Template>
                         </Button>
+                        <Button x:Name="PhotoPasteButton" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Center" Margin="0,8,0,0"
+                                Content="Nusxalangan rasmni qo'yish (Ctrl+V)" Click="PhotoPaste_Click"/>
 
                         <StackPanel x:Name="PhotoInfoPanel" Visibility="Collapsed">
                             <Grid>
@@ -379,9 +396,11 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" Margin="10,0" VerticalAlignment="Center">
                                     <TextBlock x:Name="PhotoNameText" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
-                                    <TextBlock Style="{StaticResource Hint}" Text="Suring · g'ildirak — kattalik"/>
+                                    <TextBlock Style="{StaticResource Hint}" Text="Logoni ko'rinishda suring"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                    <Button Style="{StaticResource SmallRoundButton}" Content="&#xE77F;" ToolTip="Nusxalangan rasmni qo'yish (Ctrl+V)" Margin="0,0,6,0"
+                                            Click="PhotoPaste_Click"/>
                                     <Button Style="{StaticResource SmallRoundButton}" Content="&#xE70F;" ToolTip="Boshqa rasm" Margin="0,0,6,0"
                                             Click="PhotoPickButton_Click"/>
                                     <Button Style="{StaticResource SmallRoundButton}" Content="&#xE711;" ToolTip="Rasmni olib tashlash"
@@ -400,19 +419,35 @@
                                         IsMoveToPointEnabled="True" ValueChanged="PhotoSizeSlider_ValueChanged"/>
                                 <TextBlock x:Name="PhotoSizeText" Grid.Column="2" Style="{StaticResource Unit}" HorizontalAlignment="Right" Text="45%"/>
                             </Grid>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="Tez joylash"/>
+                            <WrapPanel>
+                                <Button Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Content="Tepaga" Tag="0.28" Click="PhotoPlace_Click"/>
+                                <Button Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Content="O'rtaga" Tag="0.5" Click="PhotoPlace_Click"/>
+                                <Button Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Content="Pastga" Tag="0.72" Click="PhotoPlace_Click"/>
+                            </WrapPanel>
                             <CheckBox x:Name="PhotoDrawCheck" IsChecked="True" Content="Corel'da ham chizish (kunduzi + kechasi)"
                                       Checked="Setting_Changed" Unchecked="Setting_Changed"/>
                         </StackPanel>
 
                         <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
-                                   Text="Logo rasm ustida kunduzi va kechasi ko'rinadi. ChatGPT ham shu joyda real qilib chizadi."/>
+                                   Text="Ko'rinishda logoni suring, burchagidagi doiradan tortib kattalashtiring. ChatGPT ham shu joyda real qilib chizadi."/>
                     </StackPanel>
                 </ContentControl>
 
                 <!-- CHATGPT -->
                 <ContentControl x:Name="AiPage" Style="{StaticResource Card}" Visibility="Collapsed">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Margin="0,0,0,4" Text="OpenAI API kalit"/>
+                        <TextBlock Style="{StaticResource SectionTitle}" Margin="0,0,0,4" Text="Nimani real qilish"/>
+                        <WrapPanel>
+                            <RadioButton x:Name="AiFromSelection" Style="{StaticResource Chip}" Tag="&#xE8B3;" Content="Corel'da belgilangan" GroupName="AiSource"
+                                         IsChecked="True" Checked="Setting_Changed"/>
+                            <RadioButton x:Name="AiFromDrawing" Style="{StaticResource Chip}" Tag="&#xE70F;" Content="Chizilgan dizayn" GroupName="AiSource"
+                                         Checked="Setting_Changed"/>
+                        </WrapPanel>
+                        <TextBlock x:Name="AiSourceHint" Style="{StaticResource Hint}"
+                                   Text="Corel'da tayyor dizaynni belgilang — ChatGPT uni real qilib ko'rsatadi."/>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="OpenAI API kalit"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -469,7 +504,6 @@
 
                         <Expander Header="Qo'shimcha">
                             <StackPanel Margin="0,6,0,0">
-                                <CheckBox x:Name="SendSelectionCheck" Content="Corel'da belgilanganini yuborish" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
                                 <CheckBox x:Name="AutoSendCheck" Content="Chizilgach o'zi yuborsin"/>
                                 <Grid Margin="0,4,0,0">
                                     <Grid.ColumnDefinitions>
@@ -519,6 +553,10 @@
             <StackPanel Margin="6,0,6,10">
                 <TextBlock Text="CorelDRAW · tashqi reklama" Foreground="{StaticResource MutedBrush}"/>
                 <TextBlock Style="{StaticResource Title}" Text="Reklama Maket"/>
+                <TextBlock FontSize="12" Margin="1,1,0,0">
+                    <Run Text="by" Foreground="{StaticResource MutedBrush}"/>
+                    <Run Text="Sunnatilla Designer" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/>
+                </TextBlock>
             </StackPanel>
             <ContentControl Style="{StaticResource Card}">
                 <StackPanel>

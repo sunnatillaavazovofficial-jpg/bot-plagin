@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using corel = Corel.Interop.VGCore;
 using WpfColor = System.Windows.Media.Color;
@@ -55,7 +56,10 @@ namespace ReklamaMaket.Core
             }
         }
 
-        /// <summary>Hozir tanlangan obyekt(lar)ni logo sifatida oladi.</summary>
+        /// <summary>
+        /// Hozir tanlangan obyekt(lar)ni logo sifatida oladi: o'lchami, asosiy ranglari va
+        /// (bo'lsa) orqadagi bir xil rangli katak — u fon deb olinadi.
+        /// </summary>
         public LogoInfo CaptureSelection()
         {
             corel.Document doc = RequireDocument();
@@ -87,12 +91,75 @@ namespace ReklamaMaket.Core
                     TryDelete(file);
                 }
 
-                return new LogoInfo(selection, width, height, selection.Count, preview);
+                if (preview == null)
+                    return new LogoInfo(selection, width, height, selection.Count, null);
+
+                var bgra = new FormatConvertedBitmap(preview, PixelFormats.Bgra32, null, 0);
+                int pw = bgra.PixelWidth, ph = bgra.PixelHeight;
+                var pixels = new byte[pw * ph * 4];
+                bgra.CopyPixels(pixels, pw * 4, 0);
+
+                // Orqada katak bormi: burchaklar bir xil rangda va tanlovda tanlov o'lchamidagi alohida obyekt bor
+                Rgb24? box = LogoAnalysis.BackdropColor(pixels, pw, ph);
+                PixelRect? content = box.HasValue ? LogoAnalysis.ContentBounds(pixels, pw, ph, box.Value) : null;
+                if (box.HasValue && content.HasValue && content.Value.Width * content.Value.Height < pw * ph * 0.9 &&
+                    HasBackdropShape(selection, width, height))
+                {
+                    PixelRect r = content.Value;
+                    byte[] logoPixels = LogoAnalysis.CropAndKeyOut(pixels, pw, r, box.Value);
+                    BitmapSource logoPreview = BitmapSource.Create(r.Width, r.Height, 96, 96, PixelFormats.Bgra32, null, logoPixels, r.Width * 4);
+                    logoPreview.Freeze();
+                    var backdrop = new BackdropInfo { WidthMm = width, HeightMm = height, Color = ToColor(box.Value) };
+                    return new LogoInfo(selection, width * r.Width / pw, height * r.Height / ph, selection.Count, logoPreview,
+                        LogoAnalysis.DominantColors(logoPixels, r.Width, r.Height).ConvertAll(ToColor), backdrop);
+                }
+
+                return new LogoInfo(selection, width, height, selection.Count, preview,
+                    LogoAnalysis.DominantColors(pixels, pw, ph).ConvertAll(ToColor));
             }
             finally
             {
                 doc.Unit = oldUnit;
             }
+        }
+
+        private static WpfColor ToColor(Rgb24 c) => WpfColor.FromRgb(c.R, c.G, c.B);
+
+        /// <summary>
+        /// Tanlovda (yoki yagona guruh ichida) tanlovning o'zi kattaligidagi oddiy obyekt bormi — bu orqadagi katak.
+        /// Faqat o'qiydi; Corel versiyasida xossa bo'lmasa — katak yo'q deb hisoblanadi.
+        /// </summary>
+        private static bool HasBackdropShape(corel.ShapeRange selection, double width, double height)
+        {
+            try
+            {
+                var items = new List<dynamic>();
+                foreach (corel.Shape shape in selection)
+                    items.Add(shape);
+                if (items.Count == 1)
+                {
+                    dynamic group = items[0];
+                    int children = group.Shapes.Count;
+                    items.Clear();
+                    for (int i = 1; i <= children; i++)
+                        items.Add(group.Shapes[i]);
+                }
+                if (items.Count < 2)
+                    return false;
+
+                foreach (dynamic item in items)
+                {
+                    double w = item.SizeWidth, h = item.SizeHeight;
+                    int nested = item.Shapes.Count;
+                    if (nested == 0 && Math.Abs(w - width) < 0.6 && Math.Abs(h - height) < 0.6)
+                        return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("ReklamaMaket: katakni aniqlab bo'lmadi: " + ex.Message);
+            }
+            return false;
         }
 
         /// <summary>Obyektni PNG faylga eksport qiladi (ChatGPT'ga yuborish uchun). Fayl yo'lini qaytaradi.</summary>

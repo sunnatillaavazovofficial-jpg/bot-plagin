@@ -16,6 +16,13 @@ namespace ReklamaMaket
 
         private void InitLicense()
         {
+            if (!LicenseManager.Enabled)
+            {
+                LicenseSection.Visibility = Visibility.Collapsed;
+                ShowLicenseView(false, false);
+                return;
+            }
+
             MachineCodeBox.Text = LicenseManager.MachineCode;
             LicenseSiteLink.NavigateUri = new Uri(LicenseManager.SiteUrl);
             license = LicenseManager.Check(appSettings.LicenseKey);
@@ -31,6 +38,9 @@ namespace ReklamaMaket
         /// <summary>Amal bajarishdan oldin: kalit yaroqli bo'lmasa, faollashtirish oynasi ochiladi.</summary>
         private bool RequireLicense()
         {
+            if (!LicenseManager.Enabled)
+                return true;
+
             license = LicenseManager.Check(appSettings.LicenseKey);
             if (license.IsValid)
                 return true;

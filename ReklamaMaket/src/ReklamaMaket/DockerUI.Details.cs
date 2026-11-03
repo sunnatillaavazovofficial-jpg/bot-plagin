@@ -24,6 +24,7 @@ namespace ReklamaMaket
             public DetailInfo Info;
             public Button Swatch;
             public TextBox Hex;
+            public Button Pipette;
             public TextBox SizeBox;
             public TextBlock Placeholder;
             public TextBlock Unit;
@@ -88,10 +89,11 @@ namespace ReklamaMaket
             var panel = new StackPanel { Margin = new Thickness(0, 2, 0, 4), ToolTip = info.Hint };
             panel.Children.Add(new TextBlock { Style = (Style)FindResource("FieldLabel"), Text = SignDetails.Title(s, info.Key) });
 
-            // Rang | hex | o'lcham | birlik | ↺
+            // Rang | hex | pipetka | o'lcham | birlik | ↺
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = info.HasColor ? (info.HasSize ? new GridLength(86) : new GridLength(1, GridUnitType.Star)) : new GridLength(0) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = info.HasSize ? new GridLength(1, GridUnitType.Star) : new GridLength(0) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -110,10 +112,15 @@ namespace ReklamaMaket
                 row.Swatch.Click += DetailSwatch_Click;
                 grid.Children.Add(row.Swatch);
 
-                row.Hex = new TextBox { Tag = row, Margin = new Thickness(0, 3, info.HasSize ? 6 : 0, 3) };
+                row.Hex = new TextBox { Tag = row, Margin = new Thickness(0, 3, 0, 3) };
                 row.Hex.TextChanged += DetailHex_TextChanged;
                 Grid.SetColumn(row.Hex, 1);
                 grid.Children.Add(row.Hex);
+
+                row.Pipette = new Button { Style = (Style)FindResource("PipetteButton"), Tag = row, Margin = new Thickness(6, 3, info.HasSize ? 6 : 0, 3) };
+                row.Pipette.Click += DetailPipette_Click;
+                Grid.SetColumn(row.Pipette, 2);
+                grid.Children.Add(row.Pipette);
             }
 
             if (info.HasSize)
@@ -132,11 +139,11 @@ namespace ReklamaMaket
                 };
                 sizeHost.Children.Add(row.SizeBox);
                 sizeHost.Children.Add(row.Placeholder);
-                Grid.SetColumn(sizeHost, 2);
+                Grid.SetColumn(sizeHost, 3);
                 grid.Children.Add(sizeHost);
 
                 row.Unit = new TextBlock { Style = (Style)FindResource("Unit") };
-                Grid.SetColumn(row.Unit, 3);
+                Grid.SetColumn(row.Unit, 4);
                 grid.Children.Add(row.Unit);
             }
 
@@ -149,7 +156,7 @@ namespace ReklamaMaket
                 Tag = row
             };
             row.Reset.Click += DetailReset_Click;
-            Grid.SetColumn(row.Reset, 4);
+            Grid.SetColumn(row.Reset, 5);
             grid.Children.Add(row.Reset);
 
             panel.Children.Add(grid);
@@ -218,6 +225,18 @@ namespace ReklamaMaket
                 row.Hex.Text = ColorMath.ToHex(color);
                 ScheduleRefresh();
             }
+        }
+
+        private void DetailPipette_Click(object sender, RoutedEventArgs e)
+        {
+            var row = (DetailRow)((FrameworkElement)sender).Tag;
+            Color? picked = PickScreenColor();
+            if (picked == null)
+                return;
+
+            detailColors[row.Info.Key] = picked.Value;
+            row.Hex.Text = ColorMath.ToHex(picked.Value);
+            ScheduleRefresh();
         }
 
         private void DetailHex_TextChanged(object sender, TextChangedEventArgs e)

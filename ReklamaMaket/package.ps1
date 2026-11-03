@@ -34,9 +34,15 @@ function Find-CorelInstalls {
     }
 }
 
-# 1. Kalit tizimi sozlanganmi
-if ((Get-Content $PublicKeyFile -Raw) -match 'const string X = "";') {
-    throw "Kalit tizimi sozlanmagan. Avval keygen.bat ni ishga tushirib, '1) Birinchi sozlash' ni tanlang."
+# 1. Faollashtirish yoqilgan bo'lsa, kalit tizimi sozlangan bo'lishi kerak
+$LicenseManagerFile = Join-Path $Root "src\ReklamaMaket\Licensing\LicenseManager.cs"
+if ((Get-Content $LicenseManagerFile -Raw) -match 'bool Enabled = true;') {
+    if ((Get-Content $PublicKeyFile -Raw) -match 'const string X = "";') {
+        throw "Kalit tizimi sozlanmagan. Avval keygen.bat ni ishga tushirib, '1) Birinchi sozlash' ni tanlang."
+    }
+}
+else {
+    Write-Host "Faollashtirish o'chirilgan: plagin kalitsiz ishlaydi." -ForegroundColor Yellow
 }
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
     throw ".NET SDK topilmadi: https://dotnet.microsoft.com/download"

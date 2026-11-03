@@ -11,28 +11,37 @@ pastda uchta tugma.
 
 | Bo'lim | Nima qilinadi |
 |---|---|
-| **Logo** | Corel'dan logoni olish, haqiqiy bo'yi va eni, birlik (mm / sm / m) |
+| **Logo** | Corel'dan logoni olish — o'lchami va rangi logoning o'zidan olinadi; birlik (mm / sm / m) |
 | **Harf** | harf turi, qalinligi, ranglar (oldi, yoni, chiroq) va qo'shimcha sozlamalar |
 | **Fon** | fon turi, gul, fonning qayeri yonadi, rangi, o'lchami va qo'shimcha sozlamalar |
-| **Joyida** | bino rasmini tanlash — logo shu rasm ustida turadi (sichqoncha bilan suriladi) |
-| **AI** (ChatGPT) | OpenAI API kalit, kunduzi / kechasi, real rasm yaratish |
+| **Joyida** | bino rasmi (fayl, **Ctrl+V** yoki sudrab tashlash) — logo rasm ustida suriladi va kattalashtiriladi |
+| **AI** (ChatGPT) | Corel'da belgilangan tayyor dizaynni yoki chizilgan dizaynni real rasm qilish |
+
+Har bir rang yonida **pipetka** bor: bosing va ekranning istalgan joyini (Corel, rasm, brauzer) bosib
+rangini oling. Kattalashtiruvchi oyna piksellarni ko'rsatadi, **Esc** — bekor qilish.
 
 Pastki tugmalar: **⚙** — chizma sozlamalari (masshtab, kechki ko'rinish, yon kesim, o'lchamlar, yangi sahifa, litsenziya),
 **Corel'da chizish**, **➤** — ChatGPT bilan real rasm.
 
 ## Ish tartibi
 
-1. Corel'da logoni belgilang → **Logo** bo'limida **Corel'dan logoni olish**.
-2. Logoning haqiqiy **bo'yi**ni kiriting — eni proporsiya bo'yicha o'zi hisoblanadi.
+1. Corel'da logoni belgilang → **Logo** bo'limida **Corel'dan logoni olish**. O'lchami (Corel'dagi haqiqiy
+   o'lchami) va rangi logoning o'zidan olinadi: bir rangli logoda — oldi rangi, ko'p rangli logoda —
+   «Logoning o'z ranglari». Logo orqasida bir xil rangli **katak** bo'lsa, u fon deb olinadi: fon
+   «Kompozit panel» bo'ladi, rangi va o'lchami katakdan, katakning o'zi harflarga qo'shilmaydi.
+2. Kerak bo'lsa, haqiqiy **bo'yi**ni o'zgartiring — eni proporsiya bo'yicha o'zi hisoblanadi.
 3. **Harf** va **Fon** bo'limlarida dizaynni tanlang. Tepada ko'rinish darhol yangilanadi.
-4. Xohlasangiz, **Joyida** bo'limida bino rasmini tanlang va logoni rasmda kerakli joyga suring
-   (g'ildirak yoki «Kattaligi» bilan kattalashtiring).
+4. Xohlasangiz, **Joyida** bo'limida bino rasmini qo'ying (fayl tanlash, **Ctrl+V** yoki rasmni panelga
+   sudrab tashlash) va logoni rasmda kerakli joyga suring. Kattalashtirish — logoning burchagidagi
+   ko'k doiradan tortish, g'ildirak yoki «Kattaligi»; «Tepaga / O'rtaga / Pastga» — tez joylash.
 5. **Corel'da chizish** — yangi sahifada chiziladi:
    - kunduzgi va kechki ko'rinish, yon kesim, o'lcham chiziqlari va sarlavha;
    - bino rasmi tanlangan bo'lsa — **logo rasm ustida, kunduzi va kechasi** (kechasi rasm qorong'i, logo yonib turadi).
    Hammasi `Ctrl+Z` bilan bitta qadamda bekor qilinadi. Asl logo o'zgarmaydi.
-6. **➤ ChatGPT** — real rasm (kunduzi + kechasi). Bino rasmi bo'lsa, ChatGPT logoni aynan siz qo'ygan joyda
-   va kattalikda real qilib chizadi; bo'lmasa — umumiy binoda ko'rsatadi. Natija Corel'ga qo'shiladi va
+6. **➤ ChatGPT** — real rasm (kunduzi + kechasi). **AI** bo'limida manbani tanlang:
+   **Corel'da belgilangan** — istalgan tayyor dizaynni belgilaysiz, ChatGPT uni real qilib ko'rsatadi
+   (plaginda chizish shart emas); **Chizilgan dizayn** — plagin chizgan oxirgi dizayn. Bino rasmi bo'lsa,
+   dizayn shu joyda ko'rsatiladi (chizilgan dizaynda — aynan siz qo'ygan joyda va kattalikda). Natija Corel'ga qo'shiladi va
    `Hujjatlar\ReklamaMaket\ChatGPT\<sana>` papkasiga saqlanadi.
 
 ## Qoidalar (ogohlantirish beriladi)
@@ -180,12 +189,16 @@ xaridorga .NET SDK yoki boshqa dastur kerak emas. Talab: Windows 10/11 va CorelD
 2. CorelDRAW'ni yoping va **install.bat** ni ikki marta bosing
    (*More info → Run anyway*, ruxsat so'ralsa — *Yes*). Kompyuterdagi barcha CorelDRAW'larga o'rnatiladi.
 3. CorelDRAW'ni oching: **Reklama → Reklama Maket**. Ko'rinmasa — **F8** ni bosib turgan holda oching.
-4. **Faollashtirish:** paneldagi **kompyuter kodingiz**ni nusxalab, sayt orqali yuboring. Olingan
-   **litsenziya kaliti**ni panelga qo'yib **Faollashtirish** ni bosing. Kalit faqat shu kompyuterda ishlaydi.
+4. **Faollashtirish** (hozircha o'chirilgan — plagin kalitsiz ishlaydi): paneldagi **kompyuter kodingiz**ni
+   nusxalab, sayt orqali yuboring, olingan **litsenziya kaliti**ni qo'yib **Faollashtirish** ni bosing.
 
 O'chirish: `install.bat -Uninstall`.
 
 ## Sotuvchi uchun: kalitlar va paket
+
+> **Hozir faollashtirish o'chirilgan** (`Licensing/LicenseManager.cs` → `Enabled = false`): plagin kalitsiz
+> ishlaydi va `package.bat` kalit tizimini talab qilmaydi. Qayta yoqish: `Enabled = true` qiling, keyin
+> quyidagi qadamlar.
 
 Kalit — kompyuter kodiga bog'langan, sotuvchining maxfiy kaliti bilan imzolangan matn (`RM-…`).
 Plagin ichida faqat ochiq kalit bor: kalitni soxtalashtirib yoki boshqa kompyuterga o'tkazib bo'lmaydi.

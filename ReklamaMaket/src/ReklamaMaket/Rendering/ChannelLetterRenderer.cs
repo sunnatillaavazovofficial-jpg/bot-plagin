@@ -273,6 +273,9 @@ namespace ReklamaMaket.Rendering
                 throw new UserException("Logo topilmadi (o'chirilgan bo'lishi mumkin). Logoni qayta tanlab, \"Tanlangan logoni olish\" tugmasini bosing.", ex);
             }
 
+            if (logo.Backdrop != null)
+                copies = RemoveBackdrop(copies, logo.Backdrop);
+
             logoTemplate = Temp(copies.Count > 1 ? copies.Group() : copies.FirstShape);
             logoTemplate.MoveToLayer(layer);
             logoTemplate.SetSize(lay.Logo.Width * k, lay.Logo.Height * k);
@@ -335,6 +338,42 @@ namespace ReklamaMaket.Rendering
                 List<Point> points = InsidePoints(spacing * k, side * 0.75 * k, true, out double scale);
                 patternTemplate = Temp(Diamonds(points, side * k * scale));
             }
+        }
+
+        /// <summary>Nusxadan orqadagi katakni olib tashlaydi — u logo emas, fon sifatida chiziladi.</summary>
+        private corel.ShapeRange RemoveBackdrop(corel.ShapeRange copies, BackdropInfo backdrop)
+        {
+            corel.ShapeRange leaves = copies.UngroupAllEx();
+            if (leaves == null || leaves.Count < 2)
+                return copies;
+
+            // Bir marta ro'yxatga olinadi: COM obyektlarni qayta so'rab, solishtirib bo'lmaydi
+            var list = new List<corel.Shape>();
+            foreach (corel.Shape leaf in leaves)
+                list.Add(leaf);
+
+            int box = -1;
+            double best = 0;
+            for (int i = 0; i < list.Count; i++)
+            {
+                double w = list[i].SizeWidth, h = list[i].SizeHeight;
+                if (Math.Abs(w - backdrop.WidthMm) < 0.6 && Math.Abs(h - backdrop.HeightMm) < 0.6 && w * h > best)
+                {
+                    box = i;
+                    best = w * h;
+                }
+            }
+            if (box < 0)
+                return leaves;
+
+            corel.ShapeRange rest = app.CreateShapeRange();
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (i != box)
+                    rest.Add(list[i]);
+            }
+            list[box].Delete();
+            return rest;
         }
 
         // ================================================================ kunduzi / kechasi
@@ -1325,14 +1364,14 @@ namespace ReklamaMaket.Rendering
             items.Add(Line(left, bottom, left, y - tick, Ink, th * 0.05));
             items.Add(Line(right, bottom, right, y - tick, Ink, th * 0.05));
             items.AddRange(DimLine(left, y, right, y, tick));
-            items.Add(Label(Num.Format(s.LogoWidth) + " mm", (left + right) / 2, y - th * 0.9, th, 0));
+            items.Add(Label(Mm(s.LogoWidth) + " mm", (left + right) / 2, y - th * 0.9, th, 0));
 
             // Logo bo'yi — chapda
             double x = ox - th * 2.2;
             items.Add(Line(left, bottom, x - tick, bottom, Ink, th * 0.05));
             items.Add(Line(left, top, x - tick, top, Ink, th * 0.05));
             items.AddRange(DimLine(x, bottom, x, top, tick));
-            items.Add(Label(Num.Format(s.LogoHeight) + " mm", x - th * 0.9, (bottom + top) / 2, th, 90));
+            items.Add(Label(Mm(s.LogoHeight) + " mm", x - th * 0.9, (bottom + top) / 2, th, 90));
 
             if (HasBackgroundDims)
             {
@@ -1340,13 +1379,13 @@ namespace ReklamaMaket.Rendering
                 items.Add(Line(ox, oy, ox, by - tick, Ink, th * 0.05));
                 items.Add(Line(ox + viewW, oy, ox + viewW, by - tick, Ink, th * 0.05));
                 items.AddRange(DimLine(ox, by, ox + viewW, by, tick));
-                items.Add(Label(Num.Format(lay.BackgroundWidth) + " mm", ox + viewW / 2, by - th * 0.9, th, 0));
+                items.Add(Label(Mm(lay.BackgroundWidth) + " mm", ox + viewW / 2, by - th * 0.9, th, 0));
 
                 double bx = ox - th * 4.8;
                 items.Add(Line(ox, oy, bx - tick, oy, Ink, th * 0.05));
                 items.Add(Line(ox, oy + viewH, bx - tick, oy + viewH, Ink, th * 0.05));
                 items.AddRange(DimLine(bx, oy, bx, oy + viewH, tick));
-                items.Add(Label(Num.Format(lay.BackgroundHeight) + " mm", bx - th * 0.9, oy + viewH / 2, th, 90));
+                items.Add(Label(Mm(lay.BackgroundHeight) + " mm", bx - th * 0.9, oy + viewH / 2, th, 90));
             }
 
             return items;
@@ -1358,7 +1397,7 @@ namespace ReklamaMaket.Rendering
             {
                 s.Letter.Name + " / " + s.Letter.EnglishName,
                 string.Format("Fon: {0} · Logo {1} × {2} mm · qalinligi {3} mm · M 1:{4}",
-                    BackgroundTitle(), Num.Format(s.LogoWidth), Num.Format(s.LogoHeight), Num.Format(s.Depth), s.Scale)
+                    BackgroundTitle(), Mm(s.LogoWidth), Mm(s.LogoHeight), Mm(s.Depth), s.Scale)
             };
             lines.AddRange(rules.Warnings.Select(w => "! " + w));
             return lines;
@@ -1602,6 +1641,9 @@ namespace ReklamaMaket.Rendering
         }
 
         private static WpfColor Rgb(int hex) => ColorMath.Rgb(hex);
+
+        /// <summary>O'lcham yozuvi: 100 mm dan kattasi butun, kichigi 0,1 aniqlikda.</summary>
+        private static string Mm(double mm) => Num.Format(Math.Round(mm, mm < 100 ? 1 : 0));
 
         private static WpfColor Shade(WpfColor color, double factor) => ColorMath.Shade(color, factor);
 

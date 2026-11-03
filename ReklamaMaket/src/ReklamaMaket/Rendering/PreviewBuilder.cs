@@ -16,6 +16,11 @@ namespace ReklamaMaket.Rendering
     {
         public Canvas Root { get; set; }
         public FrameworkElement Sign { get; set; }
+
+        /// <summary>Belgi burchagidagi doira — tortib kattalashtiriladi.</summary>
+        public FrameworkElement Handle { get; set; }
+
+        public double HandleRadius { get; set; }
         public double Width { get; set; }
         public double Height { get; set; }
     }
@@ -89,7 +94,40 @@ namespace ReklamaMaket.Rendering
             Canvas.SetLeft(sign, place.X * width);
             Canvas.SetTop(sign, place.Y * height);
             canvas.Children.Add(sign);
-            return new PhotoPreview { Root = canvas, Sign = sign, Width = width, Height = height };
+
+            // Kattalashtirish doirasi va qisqa yo'riqnoma
+            const double radius = 12;
+            var handle = new Ellipse
+            {
+                Width = radius * 2,
+                Height = radius * 2,
+                Fill = Brush(ColorMath.Rgb(0x2F5BEA)),
+                Stroke = Brushes.White,
+                StrokeThickness = 3,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(handle, place.X * width + sign.Width - radius);
+            Canvas.SetTop(handle, place.Y * height + sign.Height - radius);
+            canvas.Children.Add(handle);
+
+            var hint = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(0xCC, 0x11, 0x13, 0x18)),
+                CornerRadius = new CornerRadius(14),
+                Padding = new Thickness(14, 6, 14, 6),
+                IsHitTestVisible = false,
+                Child = new TextBlock
+                {
+                    Text = "Suring · doiradan tortib kattalashtiring",
+                    Foreground = Brushes.White,
+                    FontSize = 22
+                }
+            };
+            Canvas.SetLeft(hint, 14);
+            Canvas.SetTop(hint, height - 52);
+            canvas.Children.Add(hint);
+
+            return new PhotoPreview { Root = canvas, Sign = sign, Handle = handle, HandleRadius = radius, Width = width, Height = height };
         }
 
         private static UIElement Background(SignSettings s, RuleResult rules, bool night, double width, double height, double px)

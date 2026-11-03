@@ -17,6 +17,12 @@ namespace ReklamaMaket.Licensing
         /// <summary>Kalit sotib olinadigan sayt.</summary>
         public const string SiteUrl = "https://sunnatilla-designer.uz/";
 
+        /// <summary>
+        /// Faollashtirish yoqilganmi. Hozircha o'chirilgan — plagin kalitsiz ishlaydi.
+        /// Qayta yoqish: true qiling, keygen.bat → "1) Birinchi sozlash", keyin package.bat.
+        /// </summary>
+        public static readonly bool Enabled = false;
+
         private static string machineCode;
 
         /// <summary>Shu kompyuterning kodi (Windows MachineGuid asosida).</summary>

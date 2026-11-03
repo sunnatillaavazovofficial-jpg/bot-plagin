@@ -36,6 +36,35 @@ namespace ReklamaMaket.Ai
             "its letters, shapes or colours. Show the logo from this picture as a real, physically manufactured 3D sign " +
             "with realistic materials, depth, lighting and shadows.";
 
+        /// <summary>
+        /// Corel'da belgilangan tayyor dizayn (plagin sozlamalarisiz): rasmning o'zi real belgi qilib ko'rsatiladi.
+        /// </summary>
+        public static string BuildForSelection(string userPrompt, bool night, bool hasLocationPhoto)
+        {
+            var text = new StringBuilder();
+            text.AppendLine((string.IsNullOrWhiteSpace(userPrompt) ? DefaultPrompt : userPrompt).Trim());
+            text.AppendLine();
+            text.AppendLine("How to read the attached images:");
+            text.AppendLine("- Image 1 is a finished outdoor sign design made in CorelDRAW: a flat, straight-on drawing (not a photo) " +
+                            "in the real colours and real proportions of the sign.");
+            text.AppendLine(hasLocationPhoto
+                ? "- Image 2 is a photo of the real location. Place the sign on the facade in this photo at a realistic position and scale, " +
+                  "match the perspective and light, and keep the rest of the photo unchanged."
+                : "- Show the sign mounted on a realistic building facade, viewed slightly from the side so its depth is visible.");
+            text.AppendLine();
+            text.AppendLine("Requirements:");
+            text.AppendLine("- Reproduce the design exactly: keep every letter, shape, colour, proportion and the layout unchanged.");
+            text.AppendLine("- Make it a real, professionally manufactured sign (channel letters, panels or a lightbox, as the drawing suggests) " +
+                            "with realistic materials, depth and shadows.");
+            text.AppendLine("- Do not add any extra text, logos, people, plants or decorations to the sign.");
+            text.AppendLine();
+            text.Append(night
+                ? "Night time, dark sky. The parts that are normally illuminated in such a sign (letter faces, backlit areas) glow " +
+                  "realistically, the rest stays dark. Realistic glow without exaggerated bloom."
+                : "Daytime, natural daylight, the sign lights are switched off.");
+            return text.ToString();
+        }
+
         public static string Build(SignSettings s, RuleResult rules, string userPrompt, bool night, bool hasNightReference, LocationMode location)
         {
             var text = new StringBuilder();
