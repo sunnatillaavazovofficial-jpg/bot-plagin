@@ -49,6 +49,27 @@ telefon raqam, kod va kerak bo'lsa ikki bosqichli parol bilan ulanadi.
 
 ## Serverga o'rnatish
 
+### Eng oson yo'l: bitta skript
+
+Serverga `ssh root@SERVER_IP` bilan kiring va skriptni yuklab oling:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sunnatillaavazovofficial-jpg/bot-plagin/refs/heads/claude/blissful-brown-asw2bf/TelegramCRM/install.sh -o install.sh
+```
+
+Keyin o'z qiymatlaringiz bilan ishga tushiring (Docker, git, `.env` va ishga tushirishni o'zi bajaradi;
+qayta ishga tushirish xavfsiz — maxfiy kalit va parol saqlanadi):
+
+```bash
+DOMAIN=sizning.domeningiz BOT_TOKEN=bot_tokeni ADMIN_TG_ID=telegram_id_raqamingiz bash install.sh
+```
+
+Oxirida sayt manzili, login va (birinchi marta) admin paroli ekranga chiqadi. Keyinroq `TG_API_ID=… TG_API_HASH=…`
+bilan qayta ishga tushirsangiz, Telegram akkauntlarni ulash yoqiladi.
+
+### Qo'lda o'rnatish
+
+
 Serverga SSH orqali kiring va Docker'ni o'rnating:
 
 ```bash
