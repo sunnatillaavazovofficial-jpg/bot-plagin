@@ -24,6 +24,141 @@ DIR="${INSTALL_DIR:-$HOME/bot-plagin}"
 
 say() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 
+# --- FUNKSIYALAR ---
+NGINX_RELOAD="${NGINX_RELOAD:-systemctl reload nginx}"
+APACHE_RELOAD="${APACHE_RELOAD:-systemctl reload apache2}"
+NGINX_DIR="${NGINX_DIR:-/etc/nginx}"
+APACHE_DIR="${APACHE_DIR:-/etc/apache2}"
+
+# Portni egallagan dastur nomi (bo'sh bo'lsa — port bo'sh)
+port_owner() {
+  ss -ltnpH "sport = :$1" 2>/dev/null | grep -oE 'users:\(\("[^"]+"' | head -n1 | cut -d'"' -f2 || true
+}
+
+nginx_conf() {  # $1 domen, $2 ichki port
+  cat <<CONF
+# TelegramCRM — install.sh yaratgan. Faqat $1 manzili uchun; boshqa saytlarga tegmaydi.
+server {
+    listen 80;
+    server_name $1;
+    client_max_body_size 2g;
+
+    location /ws {
+        proxy_pass http://127.0.0.1:$2;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 3600s;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:$2;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 300s;
+    }
+}
+CONF
+}
+
+apache_conf() {  # $1 domen, $2 ichki port
+  cat <<CONF
+# TelegramCRM — install.sh yaratgan. Faqat $1 manzili uchun; boshqa saytlarga tegmaydi.
+<VirtualHost *:80>
+    ServerName $1
+    ProxyRequests Off
+    ProxyPreserveHost On
+    LimitRequestBody 0
+    RequestHeader set X-Forwarded-Proto expr=%{REQUEST_SCHEME}
+    ProxyPass /ws ws://127.0.0.1:$2/ws
+    ProxyPassReverse /ws ws://127.0.0.1:$2/ws
+    ProxyPass / http://127.0.0.1:$2/
+    ProxyPassReverse / http://127.0.0.1:$2/
+</VirtualHost>
+CONF
+}
+
+# Mavjud nginx'ga shu domen uchun blok qo'shadi. 0 — muvaffaqiyat.
+setup_nginx() {  # $1 domen, $2 ichki port
+  local file link=""
+  if [ -d "$NGINX_DIR/sites-available" ] && [ -d "$NGINX_DIR/sites-enabled" ]; then
+    file="$NGINX_DIR/sites-available/telegramcrm.conf"
+    link="$NGINX_DIR/sites-enabled/telegramcrm.conf"
+  elif [ -d "$NGINX_DIR/conf.d" ]; then
+    file="$NGINX_DIR/conf.d/telegramcrm.conf"
+  else
+    echo "nginx sozlamalar papkasi topilmadi ($NGINX_DIR)."
+    return 1
+  fi
+  if ! nginx -t >/dev/null 2>&1; then
+    echo "Serverdagi nginx sozlamalarida avvaldan xato bor (nginx -t) — hech narsa o'zgartirilmadi."
+    return 1
+  fi
+  nginx_conf "$1" "$2" > "$file"
+  [ -z "$link" ] || ln -sf "$file" "$link"
+  if ! nginx -t >/dev/null 2>&1 || ! nginx -T 2>/dev/null | grep -q "server_name $1;"; then
+    echo "nginx yangi blokni qabul qilmadi — u olib tashlandi, mavjud saytlar o'zgarmadi."
+    rm -f "$file" ${link:+"$link"}
+    return 1
+  fi
+  $NGINX_RELOAD >/dev/null 2>&1 || nginx -s reload
+}
+
+# Mavjud apache'ga shu domen uchun sayt qo'shadi. 0 — muvaffaqiyat.
+setup_apache() {  # $1 domen, $2 ichki port
+  local file="$APACHE_DIR/sites-available/telegramcrm.conf"
+  [ -d "$APACHE_DIR/sites-available" ] || { echo "apache sozlamalar papkasi topilmadi ($APACHE_DIR)."; return 1; }
+  if ! apachectl configtest >/dev/null 2>&1; then
+    echo "Serverdagi apache sozlamalarida avvaldan xato bor (apachectl configtest) — hech narsa o'zgartirilmadi."
+    return 1
+  fi
+  a2enmod -q proxy proxy_http proxy_wstunnel headers >/dev/null
+  apache_conf "$1" "$2" > "$file"
+  a2ensite -q telegramcrm >/dev/null
+  if ! apachectl configtest >/dev/null 2>&1; then
+    echo "apache yangi saytni qabul qilmadi — u olib tashlandi, mavjud saytlar o'zgarmadi."
+    a2dissite -q telegramcrm >/dev/null 2>&1 || true
+    rm -f "$file"
+    return 1
+  fi
+  $APACHE_RELOAD >/dev/null 2>&1 || apachectl graceful
+}
+
+apt_install() {
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o DPkg::Lock::Timeout=180 "$@" >/dev/null 2>&1 || {
+    apt-get update -qq >/dev/null 2>&1 &&
+      DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o DPkg::Lock::Timeout=180 "$@" >/dev/null 2>&1
+  }
+}
+
+# Bepul HTTPS sertifikati (Let's Encrypt). Olinmasa sayt http orqali ishlab turadi.
+setup_https() {  # $1 nginx|apache, $2 domen
+  local plugin="python3-certbot-$1" ip
+  say "HTTPS sertifikati olinmoqda ($2)"
+  HTTPS_OK=0
+  # certbot yo'q bo'lsa yoki apt'dan o'rnatilgan-u, plagini yo'q bo'lsa (snap'dagi certbot'da plaginlar ichida)
+  if ! command -v certbot >/dev/null 2>&1 || { dpkg -s certbot >/dev/null 2>&1 && ! dpkg -s "$plugin" >/dev/null 2>&1; }; then
+    if ! apt_install certbot "$plugin"; then
+      echo "certbot o'rnatilmadi — sayt hozircha http:// orqali ochiladi. Skriptni keyinroq qayta ishga tushiring."
+      return 0
+    fi
+  fi
+  if certbot "--$1" -d "$2" --non-interactive --agree-tos --register-unsafely-without-email \
+       --redirect --keep-until-expiring >/dev/null 2>&1; then
+    HTTPS_OK=1
+  else
+    ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+    echo "Sertifikat olinmadi. $2 manzili shu server IP'siga (${ip:-server IP}) yo'naltirilganini tekshiring"
+    echo "(DuckDNS'da «current ip»), keyin skriptni qayta ishga tushiring. Hozircha sayt http:// orqali ochiladi."
+  fi
+  return 0
+}
+# --- FUNKSIYALAR OXIRI ---
+
 if [ "${CRM_SKIP_INSTALL:-0}" != "1" ]; then
   [ "$(id -u)" -eq 0 ] || { echo "Bu skriptni root sifatida ishga tushiring."; exit 1; }
   if ! command -v git >/dev/null 2>&1; then
@@ -98,8 +233,26 @@ elif [ -z "$(getvar DOMAIN)" ]; then
   setvar COOKIE_SECURE 0
 fi
 
+[ -n "$(getvar APP_PORT)" ] || setvar APP_PORT 8181
+APP_PORT_VAL="$(getvar APP_PORT)"
+MODE=caddy
+HTTPS_OK=1
+
 if [ "${CRM_SKIP_START:-0}" != "1" ]; then
+  # 80/443-portni boshqa sayt (nginx, apache...) egallaganmi?
+  OWNER="$(port_owner 80)"; [ -n "$OWNER" ] || OWNER="$(port_owner 443)"
+  if [ -n "$OWNER" ] && ! docker compose --profile caddy ps --status running --services 2>/dev/null | grep -qx caddy; then
+    case "$OWNER" in
+      nginx) MODE=nginx ;;
+      apache2|httpd) MODE=apache ;;
+      *) MODE=other ;;
+    esac
+    say "80-port band: $OWNER. Serverdagi boshqa sayt saqlanadi, CRM u orqali ulanadi."
+  fi
+  if [ "$MODE" = caddy ]; then setvar COMPOSE_PROFILES caddy; else setvar COMPOSE_PROFILES ""; fi
+
   say "Sayt ishga tushirilmoqda (birinchi marta 3-6 daqiqa)"
+  [ "$MODE" = caddy ] || docker compose --profile caddy rm -sf caddy >/dev/null 2>&1 || true
   docker compose up -d --build
   if [ "${RESET_ADMIN:-0}" = "1" ] && [ -n "$(getvar ADMIN_PASSWORD)" ]; then
     say "Admin paroli .env dagi parolga o'rnatilmoqda"
@@ -109,15 +262,50 @@ if [ "${CRM_SKIP_START:-0}" != "1" ]; then
     done
     docker compose exec -T app python -m app.cli reset-password "$(getvar ADMIN_LOGIN)" "$(getvar ADMIN_PASSWORD)"
   fi
+
+  DOMAIN_VAL="$(getvar DOMAIN)"
+  if [ "$MODE" != caddy ] && [ -z "$DOMAIN_VAL" ]; then
+    echo "Serverda boshqa sayt bor, shuning uchun CRM'ga domen kerak (masalan DOMAIN=mediamax.duckdns.org)."
+    MODE=other
+  fi
+  case "$MODE" in
+    nginx)
+      say "Mavjud nginx'ga $DOMAIN_VAL qo'shilmoqda"
+      if setup_nginx "$DOMAIN_VAL" "$APP_PORT_VAL"; then setup_https nginx "$DOMAIN_VAL"; else MODE=other; fi ;;
+    apache)
+      say "Mavjud apache'ga $DOMAIN_VAL qo'shilmoqda"
+      if setup_apache "$DOMAIN_VAL" "$APP_PORT_VAL"; then setup_https apache "$DOMAIN_VAL"; else MODE=other; fi ;;
+  esac
+  if [ "$MODE" = nginx ] || [ "$MODE" = apache ]; then
+    # Sertifikat bo'lsa https, bo'lmasa http — kirish (cookie) shunga mos bo'lishi kerak
+    if [ "$HTTPS_OK" = 1 ]; then SCHEME=https; SECURE=1; else SCHEME=http; SECURE=0; fi
+    if [ "$(getvar PUBLIC_URL)" != "$SCHEME://$DOMAIN_VAL" ] || [ "$(getvar COOKIE_SECURE)" != "$SECURE" ]; then
+      setvar PUBLIC_URL "$SCHEME://$DOMAIN_VAL"
+      setvar COOKIE_SECURE "$SECURE"
+      docker compose up -d
+    fi
+  fi
+  if [ "$MODE" = other ]; then
+    say "DIQQAT: saytni avtomatik ulab bo'lmadi"
+    echo "80/443-portni egallagan dastur: ${OWNER:-aniqlanmadi}"
+    echo "CRM ishlab turibdi (serverning ichida, 127.0.0.1:$APP_PORT_VAL), lekin tashqaridan hali ochilmaydi."
+    echo "Shu oynani rasmga olib yuboring — keyingi qadamni aytaman."
+  fi
   docker compose ps
 fi
 
 URL="$(getvar PUBLIC_URL)"
 if [ -z "$URL" ]; then
   URL="http://$(hostname -I 2>/dev/null | awk '{print $1}')"
+elif [ "$HTTPS_OK" != 1 ]; then
+  URL="http://$(getvar DOMAIN)"
 fi
 say "Tayyor"
 echo "Sayt:   $URL"
+case "$MODE" in
+  nginx) echo "Ulanish: serverdagi mavjud nginx orqali (boshqa saytlar o'zgarmadi)" ;;
+  apache) echo "Ulanish: serverdagi mavjud apache orqali (boshqa saytlar o'zgarmadi)" ;;
+esac
 echo "Login:  $(getvar ADMIN_LOGIN)"
 if [ -n "$NEW_PASS" ]; then
   echo "Parol:  $NEW_PASS   ← yozib oling!"

@@ -7,9 +7,15 @@ services:
       - crm-data:/data
     expose:
       - "8000"
+    # Faqat serverning ichidan ochiq: serverda boshqa veb-server (nginx/apache) bo'lsa, u shu portga yo'naltiradi
+    ports:
+      - "127.0.0.1:${APP_PORT:-8181}:8000"
 
+  # Caddy (avtomatik HTTPS) — .env da COMPOSE_PROFILES=caddy bo'lsa ishga tushadi.
+  # Serverda 80/443-portni boshqa sayt egallagan bo'lsa, install.sh uni o'chirib, mavjud veb-server orqali ulaydi.
   caddy:
     image: caddy:2
+    profiles: ["caddy"]
     restart: unless-stopped
     depends_on:
       - app

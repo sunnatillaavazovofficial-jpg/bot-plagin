@@ -79,6 +79,24 @@ scp "C:\Users\Siz\Desktop\TelegramCRM\.env" root@SERVER_IP:/root/crm.env
 ENV_FILE=/root/crm.env bash install.sh
 ```
 
+### Serverda boshqa sayt bo'lsa
+
+Serverda boshqa sayt ishlayotgan bo'lsa, 80 va 443-portlarni u band qilgan bo'ladi. Odatda bu nginx yoki apache. Skript buni o'zi aniqlaydi va mavjud saytni o'chirmaydi:
+
+- CRM serverning ichki portida ishlaydi (`127.0.0.1:8181`, `.env` dagi `APP_PORT`). Tashqaridan bu port ko'rinmaydi.
+- Mavjud nginx yoki apache'ga faqat `DOMAIN` uchun alohida blok qo'shiladi:
+  - nginx'da: `/etc/nginx/sites-available/telegramcrm.conf`;
+  - apache'da: `/etc/apache2/sites-available/telegramcrm.conf`.
+- Boshqa saytlarning sozlamalariga tegilmaydi. Yangi blok tekshiruvdan (`nginx -t` / `apachectl configtest`) o'tmasa, u olib tashlanadi.
+- Bepul HTTPS sertifikati `certbot` bilan olinadi. Domen hali serverga yo'naltirilmagan bo'lsa, sayt vaqtincha `http://` orqali ochiladi; domenni tuzatib, skriptni qayta ishga tushiring.
+- Port hosting paneli (aaPanel, ISPmanager va h.k.) yoki boshqa dastur qo'lida bo'lsa, skript hech narsani o'zgartirmaydi va «DIQQAT» xabarini chiqaradi.
+
+Portni qaysi dastur egallaganini qo'lda ko'rish:
+
+```bash
+ss -ltnp | grep -E ':80 |:443 '
+```
+
 **Admin parolini unutdingizmi?** Serverda:
 
 ```bash
@@ -203,6 +221,10 @@ Yangilash (yangi versiya chiqqanda):
 ```bash
 git pull && docker compose up -d --build
 ```
+
+Yoki `bash install.sh` ni qayta ishga tushiring: u Caddy yoki mavjud nginx/apache tanlovini ham o'zi qiladi.
+Qo'lda yangilaganda, serverda boshqa sayt bo'lmasa, `.env` da `COMPOSE_PROFILES=caddy` qatori bo'lishi kerak.
+Bu qator bo'lmasa, Caddy (HTTPS) ishga tushmaydi.
 
 Loglarni ko'rish:
 
