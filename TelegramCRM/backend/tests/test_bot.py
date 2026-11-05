@@ -158,3 +158,34 @@ async def test_mini_app_login(app, monkeypatch):
     assert ok.status_code == 200
     assert (await client.get("/api/auth/me")).json()["login"] == "admin"
     await client.aclose()
+
+
+async def test_admin_tg_id_prelinks_admin(tmp_path, monkeypatch):
+    """ADMIN_TG_ID berilsa admin oldindan bog'lanadi va bot unga darrov javob beradi."""
+    monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("TG_FAKE", "1")
+    monkeypatch.setenv("FAKE_INTERVAL", "0")
+    monkeypatch.setenv("DEMO_FINANCE", "0")
+    monkeypatch.setenv("SECRET_KEY", "test-secret")
+    monkeypatch.setenv("ADMIN_PASSWORD", "admin123")
+    monkeypatch.setenv("ADMIN_TG_ID", "6000000001")
+    monkeypatch.setenv("STATIC_DIR", str(tmp_path / "static"))
+    get_settings.cache_clear()
+    from app.main import create_app
+
+    application = create_app()
+    try:
+        async with application.router.lifespan_context(application):
+            async with SessionLocal() as s:
+                admin = await s.get(User, 1)
+                assert admin.tg_user_id == 6000000001
+            notify_bot.sent.clear()
+            await notify_bot.handle_update(msg("/balans", tg_id=6000000001, chat_id=6000000001))
+            assert "Kassa qoldig'i" in last_reply(6000000001)
+        # Qayta ishga tushganda takror bog'lanmaydi va xato bermaydi
+        async with application.router.lifespan_context(application):
+            async with SessionLocal() as s:
+                linked = (await s.scalars(select(User).where(User.tg_user_id == 6000000001))).all()
+                assert len(linked) == 1
+    finally:
+        get_settings.cache_clear()

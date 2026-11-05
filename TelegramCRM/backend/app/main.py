@@ -48,7 +48,26 @@ async def seed() -> None:
                 raise RuntimeError("Birinchi ishga tushirish uchun .env da ADMIN_PASSWORD ni yozing.")
             s.add(User(name="Administrator", login=cfg.admin_login.lower(), password_hash=hash_password(password), role="admin"))
             log.info("Admin yaratildi: %s", cfg.admin_login)
+            await s.flush()
+        if cfg.admin_tg_id:
+            await link_admin_telegram(s, cfg.admin_tg_id)
         await s.commit()
+
+
+async def link_admin_telegram(s, tg_id: int) -> None:
+    """ADMIN_TG_ID: adminni oldindan Telegram'iga bog'laydi (eslatmalar va botdan kassaga yozish darrov ishlaydi).
+    Shu ID allaqachon kimgadir bog'langan bo'lsa yoki bog'lanmagan admin qolmagan bo'lsa — hech narsa qilinmaydi."""
+    if await s.scalar(select(User.id).where(User.tg_user_id == tg_id)):
+        return
+    admin = await s.scalar(
+        select(User)
+        .where(User.role == "admin", User.is_active.is_(True), User.tg_user_id.is_(None))
+        .order_by(User.id)
+        .limit(1)
+    )
+    if admin is not None:
+        admin.tg_user_id = tg_id
+        log.info("Admin Telegram'ga bog'landi (ADMIN_TG_ID)")
 
 
 def make_telegram():

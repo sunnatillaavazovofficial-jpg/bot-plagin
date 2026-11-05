@@ -77,7 +77,8 @@ Maxfiy kalit yarating va chiqqan satrni `.env` dagi `SECRET_KEY=` ga qo'ying:
 openssl rand -hex 32
 ```
 
-`.env` faylini to'ldiring: `ADMIN_PASSWORD`, `TG_API_ID`, `TG_API_HASH`, `BOT_TOKEN`, `DOMAIN` va
+`.env` faylini to'ldiring: `ADMIN_PASSWORD`, `TG_API_ID`, `TG_API_HASH`, `BOT_TOKEN`, `ADMIN_TG_ID`
+(sizning Telegram ID'ingiz — admin botga oldindan bog'lanadi), `DOMAIN` va
 saytni bot ichida ochish uchun `PUBLIC_URL` (masalan `https://crm.sizning-domeningiz.uz`).
 
 ```bash

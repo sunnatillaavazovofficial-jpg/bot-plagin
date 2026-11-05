@@ -14,6 +14,11 @@ def _bool(value: str | None, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "ha", "on"}
 
 
+def _int_or_none(value: str | None) -> int | None:
+    value = (value or "").strip()
+    return int(value) if value.isdigit() else None
+
+
 @dataclass(frozen=True)
 class Settings:
     data_dir: Path
@@ -30,6 +35,7 @@ class Settings:
     cookie_secure: bool
     static_dir: Path
     public_url: str
+    admin_tg_id: int | None
 
     @property
     def db_path(self) -> Path:
@@ -75,4 +81,5 @@ def get_settings() -> Settings:
         cookie_secure=_bool(os.getenv("COOKIE_SECURE"), default=False),
         static_dir=Path(os.getenv("STATIC_DIR", str(default_static))),
         public_url=os.getenv("PUBLIC_URL", "").strip().rstrip("/"),
+        admin_tg_id=_int_or_none(os.getenv("ADMIN_TG_ID")),
     )
