@@ -5,6 +5,7 @@ import { Spinner } from "./components/ui";
 import { api, setUnauthorizedHandler } from "./lib/api";
 import { AppProvider } from "./lib/app";
 import { startLive, stopLive } from "./lib/live";
+import { setupTelegramWebApp, telegramInitData } from "./lib/telegram";
 import type { Me } from "./lib/types";
 import ClientsPage from "./pages/Clients";
 import FinancePage from "./pages/Finance";
@@ -16,16 +17,31 @@ import SettingsPage from "./pages/Settings";
 
 export default function App() {
   const [me, setMe] = useState<Me | null | undefined>(undefined);
+  const [loginNote, setLoginNote] = useState("");
 
   const loadMe = useCallback(async () => {
     try {
       setMe(await api.get<Me>("/api/auth/me"));
+      return;
     } catch {
-      setMe(null);
+      /* kirilmagan */
     }
+    // Telegram ichida ochilgan bo'lsa — bot orqali avtomatik kirish
+    const initData = telegramInitData();
+    if (initData) {
+      try {
+        await api.post("/api/auth/telegram", { init_data: initData });
+        setMe(await api.get<Me>("/api/auth/me"));
+        return;
+      } catch (e) {
+        setLoginNote((e as Error).message);
+      }
+    }
+    setMe(null);
   }, []);
 
   useEffect(() => {
+    setupTelegramWebApp();
     setUnauthorizedHandler(() => {
       stopLive();
       setMe(null);
@@ -44,7 +60,7 @@ export default function App() {
       </div>
     );
   }
-  if (me === null) return <LoginPage onLogin={loadMe} />;
+  if (me === null) return <LoginPage onLogin={loadMe} note={loginNote} />;
 
   const home = me.role === "xodim" && (me.account_ids?.length ?? 0) === 0 ? "/orders" : "/chats";
   return (

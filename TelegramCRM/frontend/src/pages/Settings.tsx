@@ -704,6 +704,26 @@ function NotifyTab() {
             ? `Bot ishlayapti: @${settings.bot.username}. Har bir xodim Profil bo'limidan botni ulaydi.`
             : settings.bot.error ?? "Bot sozlanmagan: @BotFather orqali bot yarating va tokenini .env faylida BOT_TOKEN ga yozing."}
         </div>
+        {settings.bot.enabled && (
+          <div className="mb-4 grid gap-3 text-sm sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 p-3">
+              <div className="font-medium text-slate-900">Bot orqali kassaga yozish</div>
+              <p className="mt-1 text-slate-600">
+                Admin va menejerlar botga yozadi: <code className="rounded bg-slate-100 px-1">+500000 Aziz avans</code>,{" "}
+                <code className="rounded bg-slate-100 px-1">-80 ming material</code>,{" "}
+                <code className="rounded bg-slate-100 px-1">+1.5mln karta #12</code>. Buyruqlar: /balans /bugun /oy /qarzlar /yordam
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200 p-3">
+              <div className="font-medium text-slate-900">Saytni bot ichida ochish (Mini App)</div>
+              <p className="mt-1 text-slate-600">
+                {settings.bot.mini_app
+                  ? "Yoqilgan: botdagi «CRM» tugmasi saytni Telegram ichida ochadi. Botni ulagan xodim avtomatik kiradi."
+                  : "O'chiq. Yoqish uchun .env faylida PUBLIC_URL=https://sizning-domeningiz yozing (HTTPS shart) va saytni qayta ishga tushiring."}
+              </p>
+            </div>
+          </div>
+        )}
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Kompaniya nomi">
             <Input value={values.company_name ?? ""} onChange={(e) => set("company_name", e.target.value)} />

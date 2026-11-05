@@ -29,6 +29,7 @@ class Settings:
     timezone: str
     cookie_secure: bool
     static_dir: Path
+    public_url: str
 
     @property
     def db_path(self) -> Path:
@@ -73,4 +74,5 @@ def get_settings() -> Settings:
         timezone=os.getenv("TIMEZONE", "Asia/Tashkent"),
         cookie_secure=_bool(os.getenv("COOKIE_SECURE"), default=False),
         static_dir=Path(os.getenv("STATIC_DIR", str(default_static))),
+        public_url=os.getenv("PUBLIC_URL", "").strip().rstrip("/"),
     )

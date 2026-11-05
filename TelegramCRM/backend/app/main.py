@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI):
     tg = make_telegram()
     set_telegram(tg)
     await tg.start()
-    await notify_bot.start(cfg.bot_token)
+    await notify_bot.start(cfg.bot_token, cfg.public_url)
     scheduler = asyncio.create_task(run_forever())
     try:
         yield

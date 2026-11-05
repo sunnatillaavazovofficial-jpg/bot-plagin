@@ -185,7 +185,7 @@ export interface OrderDetail extends Order {
 
 export interface SettingsResp {
   values: Record<string, string>;
-  bot: { enabled: boolean; username: string | null; error: string | null };
+  bot: { enabled: boolean; username: string | null; error: string | null; mini_app: boolean };
   telegram_configured: boolean;
   fake_mode: boolean;
 }

@@ -13,7 +13,7 @@ from ..db import get_session
 from ..deps import allowed_accounts, current_user
 from ..models import User
 from ..notify.bot import notify_bot
-from ..security import TOKEN_COOKIE, TOKEN_DAYS, create_token, hash_password, verify_password
+from ..security import TOKEN_COOKIE, TOKEN_DAYS, create_token, hash_password, verify_password, verify_telegram_init_data
 from ..serializers import user_dict
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -47,14 +47,45 @@ async def login(data: LoginIn, request: Request, response: Response, session: As
         _fails[ip].append(now)
         raise HTTPException(401, "Login yoki parol noto'g'ri")
     _fails.pop(ip, None)
+    _set_cookie(response, user.id)
+    return {"ok": True}
+
+
+def _set_cookie(response: Response, user_id: int) -> None:
     response.set_cookie(
         TOKEN_COOKIE,
-        create_token(user.id),
+        create_token(user_id),
         max_age=TOKEN_DAYS * 86400,
         httponly=True,
         samesite="lax",
         secure=get_settings().cookie_secure,
     )
+
+
+class TelegramIn(BaseModel):
+    init_data: str
+
+
+@router.post("/telegram")
+async def login_telegram(
+    data: TelegramIn, request: Request, response: Response, session: AsyncSession = Depends(get_session)
+):
+    """Sayt Telegram ichida (Mini App) ochilganda: botga bog'langan xodim avtomatik kiradi."""
+    ip = _client_ip(request)
+    now = time.monotonic()
+    _fails[ip] = [t for t in _fails[ip] if now - t < WINDOW]
+    if len(_fails[ip]) >= MAX_FAILS:
+        raise HTTPException(429, "Juda ko'p urinish. Keyinroq qayta urinib ko'ring.")
+    tg_user = verify_telegram_init_data(data.init_data, get_settings().bot_token)
+    if tg_user is None:
+        _fails[ip].append(now)
+        raise HTTPException(401, "Telegram ma'lumoti tasdiqlanmadi")
+    user = await session.scalar(select(User).where(User.tg_user_id == int(tg_user["id"]), User.is_active.is_(True)))
+    if user is None:
+        raise HTTPException(
+            403, "Bu Telegram akkaunt hech bir xodimga bog'lanmagan. Saytga login bilan kirib, Profil → Botni ulash qiling."
+        )
+    _set_cookie(response, user.id)
     return {"ok": True}
 
 

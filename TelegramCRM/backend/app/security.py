@@ -75,3 +75,33 @@ def decode_token(token: str) -> int | None:
 def random_code(length: int = 10) -> str:
     alphabet = "abcdefghjkmnpqrstuvwxyz23456789"
     return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def verify_telegram_init_data(init_data: str, bot_token: str, max_age: int = 86400) -> dict | None:
+    """Telegram Mini App initData imzosini tekshiradi. To'g'ri bo'lsa — Telegram foydalanuvchisi (dict)."""
+    import json
+    import time
+    from urllib.parse import parse_qsl
+
+    if not init_data or not bot_token:
+        return None
+    try:
+        pairs = dict(parse_qsl(init_data, keep_blank_values=True, strict_parsing=True))
+    except ValueError:
+        return None
+    received = pairs.pop("hash", None)
+    if not received:
+        return None
+    check = "\n".join(f"{k}={v}" for k, v in sorted(pairs.items()))
+    secret = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
+    expected = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, received):
+        return None
+    try:
+        auth_date = int(pairs.get("auth_date", "0"))
+        user = json.loads(pairs.get("user", "null"))
+    except ValueError:
+        return None
+    if not isinstance(user, dict) or "id" not in user or time.time() - auth_date > max_age:
+        return None
+    return user

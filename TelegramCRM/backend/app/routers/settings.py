@@ -22,7 +22,12 @@ async def read_settings(_: User = Depends(current_user), session: AsyncSession =
     tg = get_telegram()
     return {
         "values": data,
-        "bot": {"enabled": notify_bot.enabled, "username": notify_bot.username, "error": notify_bot.error},
+        "bot": {
+            "enabled": notify_bot.enabled,
+            "username": notify_bot.username,
+            "error": notify_bot.error,
+            "mini_app": notify_bot.mini_app,
+        },
         "telegram_configured": tg.configured,
         "fake_mode": type(tg).__name__ == "FakeTelegram",
     }

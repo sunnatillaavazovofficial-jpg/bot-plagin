@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Button, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
 
-export default function LoginPage({ onLogin }: { onLogin: () => void }) {
+export default function LoginPage({ onLogin, note }: { onLogin: () => void; note?: string }) {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,6 +32,7 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
             <div className="text-sm text-slate-500">Ish tizimiga kirish</div>
           </div>
         </div>
+        {note && <div className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{note}</div>}
         <div className="space-y-3">
           <Field label="Login">
             <Input value={login} onChange={(e) => setLogin(e.target.value)} autoFocus autoComplete="username" autoCapitalize="none" />
