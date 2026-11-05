@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import random
 import secrets
@@ -13,7 +14,7 @@ from sqlalchemy import func, select
 
 from ..config import Settings
 from ..db import SessionLocal
-from ..models import Chat, Message, TgAccount, utcnow
+from ..models import Chat, Folder, Message, TgAccount, utcnow
 from ..serializers import account_dict
 from ..ws_hub import hub
 from . import store
@@ -25,24 +26,38 @@ log = logging.getLogger(__name__)
 FAKE_CODE = "12345"
 FAKE_PASSWORD = "parol"
 
+# (nomi, telefon, tur, ko'rinadimi, xabarlar). Xabar: (chiquvchimi, matn[, yuboruvchi]) yoki maxsus "photo"/"document"/"buttons"
 DEMO = [
     (
         "Asosiy",
         "+998901112233",
         [
-            ("Aziz Karimov", "+998935551122", [
+            ("Aziz Karimov", "+998935551122", "private", True, [
                 (False, "Assalomu alaykum, do'konimiz uchun hajmli harf kerak edi"),
                 (True, "Va alaykum assalom! Yozuv va o'lchamini yuboring, hisoblab beramiz"),
                 (False, "\"NUR MARKET\" 4 metr, oq yorug'lik bilan"),
                 (False, "photo"),
             ]),
-            ("Dilnoza", "+998977003344", [
+            ("Dilnoza", "+998977003344", "private", True, [
                 (False, "Salom, vizitkalar 1000 dona qancha bo'ladi?"),
                 (True, "Salom! Ikki tomonlama, 350 g qog'ozda — 180 000 so'm"),
                 (False, "Yaxshi, maket tayyor, ertaga olib kelaman"),
             ]),
-            ("Bekzod (Bek Qurilish)", "+998901234567", [
+            ("Bekzod (Bek Qurilish)", "+998901234567", "private", True, [
                 (False, "Banner 3x6 m, ertaga kerak bo'ladi, ulgurasizlarmi?"),
+            ]),
+            ("Reklama ustalari", None, "group", True, [
+                (False, "Kimda 3 mm oq akril bor?", "Jasur"),
+                (False, "Bizda bor, 1 list 450 ming", "Sherzod"),
+                (True, "Menga 2 list kerak, ertaga olib ketaman"),
+                (False, "Kelishdik 👍", "Sherzod"),
+            ]),
+            ("To'lov boti", None, "bot", True, [
+                (True, "/start"),
+                (False, "buttons"),
+            ]),
+            ("Oila", None, "group", False, [
+                (False, "Kechqurun hammamiz uyda bo'lamizmi?", "Onam"),
             ]),
         ],
     ),
@@ -50,14 +65,24 @@ DEMO = [
         "Do'kon",
         "+998994445566",
         [
-            ("Sardor", "+998931112200", [
+            ("Sardor", "+998931112200", "private", True, [
                 (False, "Lightbox narxini bilsam bo'ladimi?"),
                 (True, "1x0.5 m ikki tomonlama — 1 200 000 so'm, 5 kunda tayyor"),
                 (False, "Rahmat, o'ylab ko'raman"),
             ]),
-            ("Malika Rahimova", "+998909998877", [
+            ("Malika Rahimova", "+998909998877", "private", True, [
                 (False, "Kecha olgan stikerlarimiz juda chiroyli chiqdi, rahmat!"),
                 (True, "Sizga ham rahmat! Yana kutib qolamiz 😊"),
+            ]),
+            ("Reklama materiallari (narxlar)", None, "channel", True, [
+                (False, "Bugungi narxlar: akril 3 mm — 450 000, PVX 5 mm — 280 000, LED modul — 3 500 dona"),
+                (False, "Yangi partiya: oq va sutrang akril keldi"),
+            ]),
+            ("Do'kon kanali", None, "channel_own", True, [
+                (True, "Yangi ish: «NUR MARKET» hajmli harflar o'rnatildi ✅"),
+            ]),
+            ("Futbol yangiliklari", None, "channel", False, [
+                (False, "Bugun kechqurun o'yin bor"),
             ]),
         ],
     ),
@@ -65,15 +90,30 @@ DEMO = [
         "Ish",
         "+998977778899",
         [
-            ("Javohir (Grand Mebel)", "+998946667788", [
+            ("Javohir (Grand Mebel)", "+998946667788", "private", True, [
                 (False, "Peshtaxta uchun maket tayyor bo'ldimi?"),
                 (True, "Ha, hozir yuboraman"),
                 (True, "document"),
                 (False, "Zo'r, tasdiqlayman. Avans qancha?"),
             ]),
+            ("Ustalar guruhi", None, "group", True, [
+                (False, "Ertaga Chilonzorda montaj, 9:00 da yig'ilamiz", "Brigadir"),
+                (False, "Narvon kimda?", "Otabek"),
+            ]),
         ],
     ),
 ]
+
+DEMO_FOLDERS = [("Mijozlar", "#2563eb"), ("Ta'minotchilar", "#ea580c")]
+DEMO_IN_FOLDER = {"Aziz Karimov": 0, "Dilnoza": 0, "Sardor": 0, "Reklama ustalari": 1, "Reklama materiallari (narxlar)": 1}
+
+BOT_BUTTONS = json.dumps(
+    [
+        [{"text": "💰 Balans", "kind": "callback"}, {"text": "📄 Oxirgi to'lovlar", "kind": "callback"}],
+        [{"text": "Saytga o'tish", "kind": "url", "url": "https://example.com"}],
+    ],
+    ensure_ascii=False,
+)
 
 INCOMING = [
     "Assalomu alaykum, narxini bilsam bo'ladimi?",
@@ -137,28 +177,56 @@ class FakeTelegram(BaseTelegram):
         start = utcnow() - timedelta(hours=30)
         peer = 1000
         async with SessionLocal() as s:
+            folders = []
+            for pos, (fname, fcolor) in enumerate(DEMO_FOLDERS):
+                folder = Folder(name=fname, color=fcolor, position=pos)
+                s.add(folder)
+                folders.append(folder)
             for idx, (name, phone, chats) in enumerate(DEMO):
                 acc = TgAccount(phone=phone, name=name, color=ACCOUNT_COLORS[idx], status="active",
-                                tg_user_id=900 + idx, session_enc=None, include_groups=False)
+                                tg_user_id=900 + idx, session_enc=None)
                 s.add(acc)
                 await s.flush()
-                for title, chat_phone, messages in chats:
+                for title, chat_phone, kind, visible, messages in chats:
                     peer += 1
+                    own_channel = kind == "channel_own"
+                    kind = "channel" if own_channel else kind
                     chat = await store.upsert_chat(
-                        s, acc.id, ChatData(peer_id=peer, peer_type="user", title=title, phone=chat_phone, access_hash=1)
+                        s,
+                        acc.id,
+                        ChatData(
+                            peer_id=peer if kind in ("private", "bot") else -peer,
+                            peer_type="user" if kind in ("private", "bot") else "channel",
+                            title=title,
+                            phone=chat_phone,
+                            access_hash=1,
+                            kind=kind,
+                            can_send=kind != "channel" or own_channel,
+                        ),
                     )
+                    chat.visible = visible
                     chat.history_complete = True
-                    for n, (out, text) in enumerate(messages):
+                    if title in DEMO_IN_FOLDER:
+                        chat.folder_id = folders[DEMO_IN_FOLDER[title]].id
+                    for n, item in enumerate(messages):
+                        out, text = item[0], item[1]
                         start += timedelta(minutes=random.randint(7, 90))
                         if text in {"photo", "document"}:
                             data = self._demo_media(acc.id, chat.id, text, title.split()[0])
                             data.out = out
+                        elif text == "buttons":
+                            data = MsgData(0, out, "Assalomu alaykum! Hisobingiz: 1 250 000 so'm.\nKerakli bo'limni tanlang:", start,
+                                           buttons=BOT_BUTTONS)
                         else:
-                            data = MsgData(0, out, text, start)
+                            data = MsgData(0, out, text, start, sender_name=item[2] if len(item) > 2 else None)
                         data.tg_id = n + 1
                         data.date = start
-                        await store.save_message(s, chat, data, live=True)
+                        if chat.visible:
+                            await store.save_message(s, chat, data, live=True)
+                        else:
+                            store.apply_preview(chat, data, live=True)
                     chat.read_outbox_max_id = len(messages)
+                    chat.muted = kind == "channel"
             await s.commit()
 
     async def _simulate(self) -> None:
@@ -167,11 +235,20 @@ class FakeTelegram(BaseTelegram):
             try:
                 async with SessionLocal() as s:
                     chat = await s.scalar(
-                        select(Chat).where(Chat.account_id.in_(self.connected or {0})).order_by(func.random()).limit(1)
+                        select(Chat)
+                        .where(
+                            Chat.account_id.in_(self.connected or {0}),
+                            Chat.visible.is_(True),
+                            Chat.kind.in_(("private", "group")),
+                        )
+                        .order_by(func.random())
+                        .limit(1)
                     )
                     if chat is None:
                         continue
-                    data = MsgData(await self._next_tg_id(s, chat.id), False, random.choice(INCOMING), utcnow())
+                    sender = random.choice(["Jasur", "Sherzod", "Otabek"]) if chat.kind == "group" else None
+                    data = MsgData(await self._next_tg_id(s, chat.id), False, random.choice(INCOMING), utcnow(),
+                                   sender_name=sender)
                     msg, _ = await store.save_message(s, chat, data, live=True)
                     await s.commit()
                 await store.publish_message(chat, msg)
@@ -214,7 +291,8 @@ class FakeTelegram(BaseTelegram):
             if acc is None:
                 count = await s.scalar(select(func.count(TgAccount.id))) or 0
                 acc = TgAccount(phone=pending["phone"], name=f"Akkaunt {pending['phone'][-4:]}",
-                                color=ACCOUNT_COLORS[count % len(ACCOUNT_COLORS)], tg_user_id=5000 + count)
+                                color=ACCOUNT_COLORS[count % len(ACCOUNT_COLORS)], tg_user_id=5000 + count,
+                                show_private=True, show_groups=False, show_channels=False, show_bots=False)
                 s.add(acc)
                 await s.flush()
                 chat = await store.upsert_chat(
@@ -260,6 +338,8 @@ class FakeTelegram(BaseTelegram):
     ) -> Message:
         if chat.account_id not in self.connected:
             raise TelegramError("Akkaunt ulanmagan. Sozlamalarda akkauntni qayta ulang.")
+        if not chat.can_send:
+            raise TelegramError("Bu chatga yozish huquqi yo'q.")
         async with SessionLocal() as s:
             db_chat = await s.get(Chat, chat.id)
             assert db_chat is not None
@@ -286,6 +366,25 @@ class FakeTelegram(BaseTelegram):
 
     async def load_older(self, chat_id: int, limit: int = 50) -> int:
         return 0
+
+    async def click_button(self, message: Message, row: int, col: int) -> str | None:
+        rows = json.loads(message.buttons or "[]")
+        try:
+            button = rows[row][col]
+        except (IndexError, TypeError) as exc:
+            raise TelegramError("Tugma topilmadi.") from exc
+        reply = {
+            "💰 Balans": "Balansingiz: 1 250 000 so'm",
+            "📄 Oxirgi to'lovlar": "Oxirgi to'lovlar:\n• 03.11 — 500 000 so'm\n• 01.11 — 750 000 so'm",
+        }.get(button["text"], f"«{button['text']}» bo'limi")
+        async with SessionLocal() as s:
+            chat = await s.get(Chat, message.chat_id)
+            assert chat is not None
+            data = MsgData(await self._next_tg_id(s, chat.id), False, reply, utcnow())
+            msg, _ = await store.save_message(s, chat, data, live=True)
+            await s.commit()
+        await store.publish_message(chat, msg)
+        return None
 
 
 def _guess_mime(path: Path) -> str:

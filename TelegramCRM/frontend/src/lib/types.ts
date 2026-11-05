@@ -31,16 +31,34 @@ export interface Account {
   color: string;
   status: "active" | "error" | "logged_out";
   last_error: string | null;
-  include_groups: boolean;
+  show_private: boolean;
+  show_groups: boolean;
+  show_channels: boolean;
+  show_bots: boolean;
   synced_at: string | null;
   connected: boolean | null;
   unread?: number;
+}
+
+export type ChatKind = "private" | "bot" | "group" | "channel";
+
+export interface Folder {
+  id: number;
+  name: string;
+  color: string;
+  position: number;
+  chats?: number;
 }
 
 export interface Chat {
   id: number;
   account_id: number;
   peer_type: "user" | "chat" | "channel";
+  kind: ChatKind;
+  visible: boolean;
+  muted: boolean;
+  can_send: boolean;
+  folder_id: number | null;
   title: string;
   username: string | null;
   phone: string | null;
@@ -74,7 +92,14 @@ export interface Message {
   media_size: number | null;
   sender_name: string | null;
   reply_to_tg_id: number | null;
+  buttons: BotButton[][] | null;
   sent_by_user_id: number | null;
+}
+
+export interface BotButton {
+  text: string;
+  kind: "callback" | "url" | "reply" | "other";
+  url?: string;
 }
 
 export interface Client {
@@ -172,4 +197,5 @@ export type LiveEvent =
   | { type: "account.update"; account: Account }
   | { type: "account.deleted"; account_id: number }
   | { type: "order.update"; order_id: number; status_id?: number; deleted?: boolean }
-  | { type: "statuses.update" };
+  | { type: "statuses.update" }
+  | { type: "folders.update" };

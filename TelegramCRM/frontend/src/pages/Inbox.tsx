@@ -1,7 +1,8 @@
-import { MessageCircle, Search } from "lucide-react";
+import { BellOff, MessageCircle, Search, SlidersHorizontal } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ChatSidePanel from "../components/ChatSidePanel";
+import { KIND_LABELS, KINDS, KindIcon } from "../components/chatKinds";
 import Conversation from "../components/Conversation";
 import OrderForm, { type OrderDraft } from "../components/OrderForm";
 import { Avatar, Empty, Input, Spinner, cx } from "../components/ui";
@@ -24,9 +25,11 @@ export default function InboxPage() {
   const { chatId } = useParams();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const { accounts, accountById, settings } = useApp();
+  const { accounts, accountById, settings, folders, isManager } = useApp();
   const filter = params.get("filter") ?? "all";
   const accountFilter = params.get("account") ?? "";
+  const kindFilter = params.get("kind") ?? "";
+  const folderFilter = params.get("folder") ?? "";
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [chats, setChats] = useState<Chat[]>([]);
@@ -51,6 +54,8 @@ export default function InboxPage() {
         const list = await api.get<Chat[]>("/api/chats", {
           filter,
           account_id: accountFilter || undefined,
+          kind: kindFilter || undefined,
+          folder_id: folderFilter || undefined,
           q: debouncedQ || undefined,
           limit: PAGE,
           offset,
@@ -61,7 +66,7 @@ export default function InboxPage() {
         setLoading(false);
       }
     },
-    [filter, accountFilter, debouncedQ],
+    [filter, accountFilter, kindFilter, folderFilter, debouncedQ],
   );
 
   useEffect(() => {
@@ -93,6 +98,7 @@ export default function InboxPage() {
           if (e.type === "message.new") scheduleReload();
           return list;
         }
+        if (!chat.visible) return list.filter((c) => c.id !== chat.id);
         const copy = [...list];
         copy[idx] = chat;
         return copy.sort((a, b) => (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""));
@@ -122,10 +128,80 @@ export default function InboxPage() {
         )}
       >
         <div className="space-y-2.5 border-b border-slate-100 p-3">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ism, telefon yoki matn..." className="pl-9" />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ism, telefon yoki matn..." className="pl-9" />
+            </div>
+            {isManager && (
+              <Link
+                to="/settings/chats"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                title="Chatlarni tanlash va papkalar"
+              >
+                <SlidersHorizontal size={17} />
+              </Link>
+            )}
           </div>
+          <div className="scroll-thin flex gap-1 overflow-x-auto">
+            <button
+              onClick={() => setFilterParam("kind", "")}
+              className={cx(
+                "whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium",
+                !kindFilter ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-700 hover:bg-blue-100",
+              )}
+            >
+              Barchasi
+            </button>
+            {KINDS.map((k) => (
+              <button
+                key={k}
+                onClick={() => setFilterParam("kind", k)}
+                className={cx(
+                  "flex items-center gap-1 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium",
+                  kindFilter === k ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-700 hover:bg-blue-100",
+                )}
+              >
+                <KindIcon kind={k} size={13} /> {KIND_LABELS[k]}
+              </button>
+            ))}
+          </div>
+          {folders.length > 0 && (
+            <div className="scroll-thin flex gap-1.5 overflow-x-auto">
+              <button
+                onClick={() => setFilterParam("folder", "")}
+                className={cx(
+                  "whitespace-nowrap rounded-lg border px-2.5 py-1 text-xs font-medium",
+                  !folderFilter ? "border-slate-900 text-slate-900" : "border-slate-200 text-slate-500",
+                )}
+              >
+                Barcha papkalar
+              </button>
+              {folders.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setFilterParam("folder", String(f.id))}
+                  className={cx(
+                    "flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1 text-xs font-medium",
+                    folderFilter === String(f.id) ? "text-slate-900" : "border-slate-200 text-slate-500",
+                  )}
+                  style={folderFilter === String(f.id) ? { borderColor: f.color } : undefined}
+                >
+                  <span className="h-2 w-2 rounded-sm" style={{ background: f.color }} />
+                  {f.name}
+                </button>
+              ))}
+              <button
+                onClick={() => setFilterParam("folder", "0")}
+                className={cx(
+                  "whitespace-nowrap rounded-lg border px-2.5 py-1 text-xs font-medium",
+                  folderFilter === "0" ? "border-slate-900 text-slate-900" : "border-slate-200 text-slate-500",
+                )}
+              >
+                Papkasiz
+              </button>
+            </div>
+          )}
           <div className="flex gap-1 overflow-x-auto">
             {FILTERS.map((f) => (
               <button
@@ -186,7 +262,8 @@ export default function InboxPage() {
             <>
               {chats.map((c) => {
                 const acc = accountById(c.account_id);
-                const waiting = !c.last_message_out && c.last_incoming_at && minutesAgo(c.last_incoming_at) >= waitMinutes;
+                const waiting =
+                  c.kind === "private" && !c.muted && !c.last_message_out && c.last_incoming_at && minutesAgo(c.last_incoming_at) >= waitMinutes;
                 return (
                   <button
                     key={c.id}
@@ -208,8 +285,15 @@ export default function InboxPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
-                        <span className={cx("truncate text-[15px]", c.unread_count ? "font-semibold text-slate-900" : "font-medium text-slate-800")}>
-                          {c.title}
+                        <span
+                          className={cx(
+                            "flex min-w-0 items-center gap-1 text-[15px]",
+                            c.unread_count ? "font-semibold text-slate-900" : "font-medium text-slate-800",
+                          )}
+                        >
+                          {c.kind !== "private" && <KindIcon kind={c.kind} size={14} className="shrink-0 text-slate-400" />}
+                          <span className="truncate">{c.title}</span>
+                          {c.muted && <BellOff size={13} className="shrink-0 text-slate-300" aria-label="Ovozsiz" />}
                         </span>
                         <span className={cx("shrink-0 text-xs", c.unread_count ? "text-blue-600" : "text-slate-400")}>
                           {chatTime(c.last_message_at)}
@@ -226,7 +310,12 @@ export default function InboxPage() {
                           </span>
                         )}
                         {c.unread_count > 0 && (
-                          <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 px-1.5 text-[11px] font-semibold text-white">
+                          <span
+                            className={cx(
+                              "flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white",
+                              c.muted ? "bg-slate-300" : "bg-blue-600",
+                            )}
+                          >
                             {c.unread_count}
                           </span>
                         )}

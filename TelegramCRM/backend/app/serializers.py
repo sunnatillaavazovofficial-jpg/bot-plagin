@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date, datetime
 
 from .models import (
     Chat,
     Client,
+    Folder,
     Message,
     Order,
     OrderEvent,
@@ -24,6 +26,15 @@ def _dt(value: datetime | None) -> str | None:
 
 def _d(value: date | None) -> str | None:
     return value.isoformat() if value else None
+
+
+def _json(value: str | None):
+    if not value:
+        return None
+    try:
+        return json.loads(value)
+    except ValueError:
+        return None
 
 
 def user_dict(u: User, account_ids: list[int] | None = None) -> dict:
@@ -50,7 +61,10 @@ def account_dict(a: TgAccount, connected: bool | None = None) -> dict:
         "color": a.color,
         "status": a.status,
         "last_error": a.last_error,
-        "include_groups": a.include_groups,
+        "show_private": a.show_private,
+        "show_groups": a.show_groups,
+        "show_channels": a.show_channels,
+        "show_bots": a.show_bots,
         "synced_at": _dt(a.synced_at),
         "connected": connected,
     }
@@ -61,6 +75,11 @@ def chat_dict(c: Chat) -> dict:
         "id": c.id,
         "account_id": c.account_id,
         "peer_type": c.peer_type,
+        "kind": c.kind,
+        "visible": c.visible,
+        "muted": c.muted,
+        "can_send": c.can_send,
+        "folder_id": c.folder_id,
         "title": c.title,
         "username": c.username,
         "phone": c.phone,
@@ -91,8 +110,13 @@ def message_dict(m: Message) -> dict:
         "media_size": m.media_size,
         "sender_name": m.sender_name,
         "reply_to_tg_id": m.reply_to_tg_id,
+        "buttons": _json(m.buttons),
         "sent_by_user_id": m.sent_by_user_id,
     }
+
+
+def folder_dict(f: Folder) -> dict:
+    return {"id": f.id, "name": f.name, "color": f.color, "position": f.position}
 
 
 def client_dict(c: Client, **extra) -> dict:

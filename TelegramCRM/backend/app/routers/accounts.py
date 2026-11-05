@@ -83,7 +83,10 @@ async def login_password(data: PasswordIn):
 class AccountPatch(BaseModel):
     name: str | None = None
     color: str | None = None
-    include_groups: bool | None = None
+    show_private: bool | None = None
+    show_groups: bool | None = None
+    show_channels: bool | None = None
+    show_bots: bool | None = None
 
 
 @router.patch("/{account_id}", dependencies=[Depends(admin_only)])
@@ -95,16 +98,12 @@ async def update_account(account_id: int, data: AccountPatch, session: AsyncSess
         acc.name = data.name.strip()
     if data.color is not None:
         acc.color = data.color
-    groups_enabled = False
-    if data.include_groups is not None:
-        groups_enabled = data.include_groups and not acc.include_groups
-        acc.include_groups = data.include_groups
+    for field in ("show_private", "show_groups", "show_channels", "show_bots"):
+        value = getattr(data, field)
+        if value is not None:
+            setattr(acc, field, value)
     await session.commit()
-    tg = get_telegram()
-    tg.account_settings_changed(acc.id, acc.include_groups)
-    if groups_enabled and tg.is_connected(acc.id):
-        await tg.resync(acc.id)
-    payload = account_dict(acc, tg.is_connected(acc.id))
+    payload = account_dict(acc, get_telegram().is_connected(acc.id))
     await hub.publish({"type": "account.update", "account": payload}, account_id=acc.id)
     return payload
 

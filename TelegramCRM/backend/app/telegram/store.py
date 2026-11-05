@@ -9,7 +9,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import Chat, Message
+from ..models import Chat, Message, TgAccount
 from ..serializers import chat_dict, message_dict
 from ..ws_hub import hub
 
@@ -37,6 +37,8 @@ class ChatData:
     access_hash: int | None = None
     username: str | None = None
     phone: str | None = None
+    kind: str = "private"  # private | bot | group | channel
+    can_send: bool = True
 
 
 @dataclass
@@ -52,6 +54,19 @@ class MsgData:
     media_path: str | None = None
     sender_name: str | None = None
     reply_to_tg_id: int | None = None
+    buttons: str | None = None  # JSON
+
+
+def default_visible(account: TgAccount | None, kind: str) -> bool:
+    """Yangi chat saytda avtomatik ko'rinsinmi — akkaunt sozlamasiga qarab."""
+    if account is None:
+        return kind == "private"
+    return {
+        "private": account.show_private,
+        "group": account.show_groups,
+        "channel": account.show_channels,
+        "bot": account.show_bots,
+    }.get(kind, False)
 
 
 def preview_text(data: MsgData | Message) -> str:
@@ -73,10 +88,15 @@ async def get_chat_by_peer(session: AsyncSession, account_id: int, peer_id: int)
 async def upsert_chat(session: AsyncSession, account_id: int, data: ChatData) -> Chat:
     chat = await get_chat_by_peer(session, account_id, data.peer_id)
     if chat is None:
+        account = await session.get(TgAccount, account_id)
         chat = Chat(
             account_id=account_id,
             peer_id=data.peer_id,
             peer_type=data.peer_type,
+            kind=data.kind,
+            can_send=data.can_send,
+            visible=default_visible(account, data.kind),
+            muted=False,
             title=data.title or "Nomsiz",
             access_hash=data.access_hash,
             username=data.username,
@@ -90,6 +110,8 @@ async def upsert_chat(session: AsyncSession, account_id: int, data: ChatData) ->
         await session.flush()
     else:
         chat.title = data.title or chat.title
+        chat.kind = data.kind
+        chat.can_send = data.can_send
         if data.access_hash is not None:
             chat.access_hash = data.access_hash
         if data.username is not None:
@@ -126,6 +148,7 @@ async def save_message(
             media_path=data.media_path,
             sender_name=data.sender_name,
             reply_to_tg_id=data.reply_to_tg_id,
+            buttons=data.buttons,
             sent_by_user_id=sent_by_user_id,
         )
         .on_conflict_do_nothing(index_elements=["chat_id", "tg_id"])
@@ -142,18 +165,25 @@ async def save_message(
         if data.media_path and not msg.media_path:
             msg.media_path = data.media_path
 
-    if created and (chat.last_message_at is None or data.date >= chat.last_message_at):
-        chat.last_message_at = data.date
-        chat.last_message_text = preview_text(data)
-        chat.last_message_out = data.out
-        if not data.out:
-            chat.last_incoming_at = data.date
-            if live:
-                chat.unread_count = (chat.unread_count or 0) + 1
-        elif live:
-            # Telefondan yoki saytdan javob yozilgan — chat o'qilgan hisoblanadi
-            chat.unread_count = 0
+    if created:
+        apply_preview(chat, data, live=live)
     return msg, created
+
+
+def apply_preview(chat: Chat, data: MsgData, *, live: bool) -> None:
+    """Chat ro'yxatidagi oxirgi xabar va o'qilmaganlar sonini yangilaydi."""
+    if chat.last_message_at is not None and data.date < chat.last_message_at:
+        return
+    chat.last_message_at = data.date
+    chat.last_message_text = preview_text(data)
+    chat.last_message_out = data.out
+    if not data.out:
+        chat.last_incoming_at = data.date
+        if live:
+            chat.unread_count = (chat.unread_count or 0) + 1
+    elif live:
+        # Telefondan yoki saytdan javob yozilgan — chat o'qilgan hisoblanadi
+        chat.unread_count = 0
 
 
 async def publish_message(chat: Chat, msg: Message, kind: str = "message.new") -> None:
@@ -168,8 +198,14 @@ async def publish_chat(chat: Chat) -> None:
 
 
 async def mark_edited(
-    session: AsyncSession, account_id: int, peer_id: int, tg_id: int, text: str
+    session: AsyncSession,
+    account_id: int,
+    peer_id: int,
+    tg_id: int,
+    text: str,
+    buttons: str | None | bool = False,
 ) -> tuple[Chat, Message] | None:
+    """buttons=False — tugmalarga tegilmaydi; None/JSON — yangilanadi (bot xabarni o'zgartirganda)."""
     chat = await get_chat_by_peer(session, account_id, peer_id)
     if chat is None:
         return None
@@ -178,8 +214,11 @@ async def mark_edited(
     )
     if msg is None:
         return None
+    if (text or "") != msg.text:
+        msg.edited = True
     msg.text = text or ""
-    msg.edited = True
+    if buttons is not False:
+        msg.buttons = buttons
     return chat, msg
 
 

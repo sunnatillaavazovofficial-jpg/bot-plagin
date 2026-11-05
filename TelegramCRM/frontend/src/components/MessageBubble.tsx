@@ -1,7 +1,7 @@
 import { Check, CheckCheck, ClipboardPlus, Download, FileText, MapPin, Reply } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 import { fileSize, formatTime } from "../lib/format";
-import type { Message } from "../lib/types";
+import type { BotButton, Message } from "../lib/types";
 import { cx } from "./ui";
 
 const URL_RE = /(https?:\/\/[^\s<]+)/g;
@@ -76,6 +76,7 @@ export default function MessageBubble({
   replyText,
   onOrder,
   onReply,
+  onButton,
 }: {
   m: Message;
   read: boolean;
@@ -83,6 +84,7 @@ export default function MessageBubble({
   replyText?: string | null;
   onOrder?: () => void;
   onReply?: () => void;
+  onButton?: (row: number, col: number, button: BotButton) => void;
 }) {
   return (
     <div tabIndex={-1} className={cx("group flex items-end gap-1.5 outline-none", m.out ? "justify-end" : "justify-start")}>
@@ -115,6 +117,38 @@ export default function MessageBubble({
           <span>{formatTime(m.date)}</span>
           {m.out && (read ? <CheckCheck size={14} /> : <Check size={14} />)}
         </div>
+        {m.buttons && m.buttons.length > 0 && !m.deleted && (
+          <div className="mt-2 space-y-1">
+            {m.buttons.map((row, ri) => (
+              <div key={ri} className="flex gap-1">
+                {row.map((b, ci) =>
+                  b.kind === "url" && b.url ? (
+                    <a
+                      key={ci}
+                      href={b.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="flex-1 truncate rounded-lg bg-black/5 px-2 py-1.5 text-center text-xs font-medium text-blue-700 hover:bg-black/10"
+                    >
+                      {b.text} ↗
+                    </a>
+                  ) : (
+                    <button
+                      key={ci}
+                      onClick={() => onButton?.(ri, ci, b)}
+                      className={cx(
+                        "flex-1 truncate rounded-lg px-2 py-1.5 text-xs font-medium",
+                        m.out ? "bg-white/20 text-white hover:bg-white/30" : "bg-blue-50 text-blue-700 hover:bg-blue-100",
+                      )}
+                    >
+                      {b.text}
+                    </button>
+                  ),
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       {!m.out && <BubbleActions onOrder={onOrder} onReply={onReply} />}
     </div>

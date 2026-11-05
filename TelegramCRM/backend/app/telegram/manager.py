@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import secrets
 import time
@@ -26,7 +27,7 @@ from .store import ChatData, MsgData
 log = logging.getLogger(__name__)
 
 SERVICE_USER_ID = 777000  # Telegram xizmat xabarlari (kirish kodlari) — xavfsizlik uchun ko'rsatilmaydi
-DIALOGS_LIMIT = 300
+DIALOGS_LIMIT = 500
 FIRST_SYNC_MESSAGES = 30
 CATCHUP_MESSAGES = 100
 PENDING_TTL = 15 * 60
@@ -107,7 +108,62 @@ def msg_data(m, sender_name: str | None = None) -> MsgData:
         media_size=(file.size if file else None),
         sender_name=sender_name,
         reply_to_tg_id=m.reply_to_msg_id,
+        buttons=extract_buttons(getattr(m, "reply_markup", None)),
     )
+
+
+def extract_buttons(markup) -> str | None:
+    """Bot xabaridagi tugmalarni JSON ko'rinishida saqlash uchun."""
+    if isinstance(markup, types.ReplyInlineMarkup):
+        inline = True
+    elif isinstance(markup, types.ReplyKeyboardMarkup):
+        inline = False
+    else:
+        return None
+    rows = []
+    for row in markup.rows:
+        items = []
+        for button in row.buttons:
+            text = getattr(button, "text", "") or ""
+            # Yangi Telegram qatlamida tugma turi button.type ichida (InlineButtonTypeCallback, ...Url),
+            # eskisida tugmaning o'z klassi (KeyboardButtonCallback, KeyboardButtonUrl)
+            btype = getattr(button, "type", None)
+            type_name = type(btype if btype is not None else button).__name__
+            url = getattr(btype, "url", None) or getattr(button, "url", None)
+            if not inline:
+                items.append({"text": text, "kind": "reply"})
+            elif type_name in ("InlineButtonTypeCallback", "KeyboardButtonCallback"):
+                items.append({"text": text, "kind": "callback"})
+            elif isinstance(url, str) and url.startswith(("https://", "http://")):
+                items.append({"text": text, "kind": "url", "url": url})
+            else:
+                items.append({"text": text, "kind": "other"})
+        if items:
+            rows.append(items)
+    return json.dumps(rows, ensure_ascii=False) if rows else None
+
+
+def _can_post(entity) -> bool:
+    if getattr(entity, "creator", False):
+        return True
+    admin = getattr(entity, "admin_rights", None)
+    if isinstance(entity, types.Channel) and entity.broadcast:
+        return bool(admin and admin.post_messages)
+    if admin is not None:
+        return True
+    for rights in (getattr(entity, "banned_rights", None), getattr(entity, "default_banned_rights", None)):
+        if rights is not None and rights.send_messages:
+            return False
+    return True
+
+
+def classify(entity) -> tuple[str, bool]:
+    """Chat turi (private | bot | group | channel) va unga yozish mumkinligi."""
+    if isinstance(entity, types.User):
+        return ("bot" if entity.bot else "private"), not getattr(entity, "deleted", False)
+    if isinstance(entity, types.Channel) and entity.broadcast and not entity.megagroup:
+        return "channel", _can_post(entity)
+    return "group", _can_post(entity)
 
 
 def chat_data(entity, input_peer=None) -> ChatData:
@@ -120,6 +176,7 @@ def chat_data(entity, input_peer=None) -> ChatData:
     else:
         peer_type, phone = "channel", None
     title = utils.get_display_name(entity) or ("O'chirilgan akkaunt" if getattr(entity, "deleted", False) else "")
+    kind, can_send = classify(entity)
     return ChatData(
         peer_id=utils.get_peer_id(entity),
         peer_type=peer_type,
@@ -127,6 +184,8 @@ def chat_data(entity, input_peer=None) -> ChatData:
         access_hash=access_hash,
         username=getattr(entity, "username", None),
         phone=phone,
+        kind=kind,
+        can_send=can_send,
     )
 
 
@@ -144,7 +203,6 @@ class TelegramManager(BaseTelegram):
         self.settings = settings
         self.clients: dict[int, TelegramClient] = {}
         self.me_ids: dict[int, int] = {}
-        self.include_groups: dict[int, bool] = {}
         self.pending: dict[str, PendingLogin] = {}
         self._tasks: set[asyncio.Task] = set()
         self._media_locks: dict[int, asyncio.Lock] = {}
@@ -182,19 +240,16 @@ class TelegramManager(BaseTelegram):
         return client
 
     def _accept(self, account_id: int, entity) -> bool:
+        """Shaxsiy chat, bot, guruh va kanallar olinadi. Chiqarib tashlanadi: Telegram xizmat chati (kirish kodlari),
+        «Saqlangan xabarlar» va chiqib ketilgan/yopilgan guruhlar."""
         if isinstance(entity, types.User):
             return not (
-                entity.bot
-                or entity.is_self
-                or entity.id == SERVICE_USER_ID
-                or entity.id == self.me_ids.get(account_id)
+                entity.is_self or entity.id == SERVICE_USER_ID or entity.id == self.me_ids.get(account_id)
             )
-        if not self.include_groups.get(account_id):
-            return False
         if isinstance(entity, types.Chat):
-            return not getattr(entity, "deactivated", False)
+            return not (getattr(entity, "deactivated", False) or getattr(entity, "left", False))
         if isinstance(entity, types.Channel):
-            return bool(entity.megagroup)
+            return not getattr(entity, "left", False)
         return False
 
     async def _set_status(self, account_id: int, status: str, error: str | None = None) -> None:
@@ -218,10 +273,10 @@ class TelegramManager(BaseTelegram):
                 await s.scalars(select(TgAccount).where(TgAccount.status != "logged_out"))
             ).all()
         for acc in accounts:
-            self._spawn(self._start_account(acc.id, acc.session_enc, acc.include_groups))
+            self._spawn(self._start_account(acc.id, acc.session_enc))
         self._spawn(self._watchdog())
 
-    async def _start_account(self, account_id: int, session_enc: str | None, include_groups: bool) -> None:
+    async def _start_account(self, account_id: int, session_enc: str | None) -> None:
         session = decrypt(session_enc) if session_enc else None
         if not session:
             await self._set_status(account_id, "error", "Sessiya o'qilmadi (SECRET_KEY o'zgarganmi?). Qayta ulang.")
@@ -240,17 +295,16 @@ class TelegramManager(BaseTelegram):
             log.exception("Akkaunt %s ulanmadi", account_id)
             await self._set_status(account_id, "error", _human_error(exc))
             return
-        self._attach(account_id, client, include_groups, me.id)
+        self._attach(account_id, client, me.id)
         await self._set_status(account_id, "active")
         self._spawn(self._sync(account_id))
 
-    def _attach(self, account_id: int, client: TelegramClient, include_groups: bool, me_id: int) -> None:
+    def _attach(self, account_id: int, client: TelegramClient, me_id: int) -> None:
         old = self.clients.get(account_id)
         if old is not None and old is not client:
             self._spawn(old.disconnect())
         self.clients[account_id] = client
         self.me_ids[account_id] = me_id
-        self.include_groups[account_id] = include_groups
         self._register_handlers(account_id, client)
 
     async def stop(self) -> None:
@@ -285,9 +339,6 @@ class TelegramManager(BaseTelegram):
                 except Exception:  # noqa: BLE001
                     log.warning("Watchdog: akkaunt %s tekshiruvida xato", account_id, exc_info=True)
 
-    def account_settings_changed(self, account_id: int, include_groups: bool) -> None:
-        self.include_groups[account_id] = include_groups
-
     # ---------- hodisalar ----------
 
     def _register_handlers(self, account_id: int, client: TelegramClient) -> None:
@@ -300,7 +351,14 @@ class TelegramManager(BaseTelegram):
         async def on_edit(event):
             try:
                 async with SessionLocal() as s:
-                    res = await store.mark_edited(s, account_id, event.chat_id, event.message.id, event.message.message)
+                    res = await store.mark_edited(
+                        s,
+                        account_id,
+                        event.chat_id,
+                        event.message.id,
+                        event.message.message,
+                        extract_buttons(getattr(event.message, "reply_markup", None)),
+                    )
                     await s.commit()
                 if res:
                     await store.publish_message(res[0], res[1], "message.edit")
@@ -336,14 +394,20 @@ class TelegramManager(BaseTelegram):
         entity = await event.get_chat()
         if entity is None or not self._accept(account_id, entity):
             return
+        cdata = chat_data(entity, await event.get_input_chat())
         sender_name = None
-        if not event.is_private:
+        if cdata.kind == "group":
             sender = await event.get_sender()
             sender_name = utils.get_display_name(sender) if sender else None
-        peer = await event.get_input_chat()
+        data = msg_data(m, sender_name)
         async with SessionLocal() as s:
-            chat = await store.upsert_chat(s, account_id, chat_data(entity, peer))
-            msg, created = await store.save_message(s, chat, msg_data(m, sender_name), live=True)
+            chat = await store.upsert_chat(s, account_id, cdata)
+            if not chat.visible:
+                # Yashirin chat: xabar saqlanmaydi, faqat ro'yxatdagi ko'rinishi yangilanadi
+                store.apply_preview(chat, data, live=True)
+                await s.commit()
+                return
+            msg, created = await store.save_message(s, chat, data, live=True)
             await s.commit()
         if created:
             await store.publish_message(chat, msg)
@@ -388,19 +452,13 @@ class TelegramManager(BaseTelegram):
                 async with SessionLocal() as s:
                     chat = await store.upsert_chat(s, account_id, chat_data(entity, dialog.input_entity))
                     last = await store.max_tg_id(s, chat.id)
+                    top_msg = dialog.message if getattr(dialog.message, "action", None) is None else None
                     top = dialog.message.id if dialog.message else 0
-                    if top > last:
-                        limit = FIRST_SYNC_MESSAGES if last == 0 else CATCHUP_MESSAGES
-                        msgs = await client.get_messages(dialog.input_entity, limit=limit, min_id=last)
-                        for m in reversed(msgs):
-                            if getattr(m, "action", None) is not None:
-                                continue
-                            sender = None
-                            if chat.peer_type != "user" and m.sender is not None:
-                                sender = utils.get_display_name(m.sender)
-                            await store.save_message(s, chat, msg_data(m, sender), live=False)
-                        if last == 0 and len(msgs) < limit:
-                            chat.history_complete = True
+                    if not chat.visible:
+                        if top_msg is not None:
+                            store.apply_preview(chat, msg_data(top_msg), live=False)
+                    elif top > last:
+                        await self._fetch_new(client, s, chat, dialog.input_entity, last)
                         fetched += 1
                     chat.unread_count = dialog.unread_count
                     await store.set_read_outbox(s, chat, dialog.dialog.read_outbox_max_id or 0)
@@ -421,6 +479,60 @@ class TelegramManager(BaseTelegram):
         finally:
             self._sync_running.discard(account_id)
 
+    async def _fetch_new(self, client: TelegramClient, s, chat: Chat, peer, last: int) -> None:
+        limit = FIRST_SYNC_MESSAGES if last == 0 else CATCHUP_MESSAGES
+        msgs = await client.get_messages(peer, limit=limit, min_id=last)
+        for m in reversed(msgs):
+            if getattr(m, "action", None) is not None:
+                continue
+            await store.save_message(s, chat, msg_data(m, self._sender_name(chat, m)), live=False)
+        if last == 0 and len(msgs) < limit:
+            chat.history_complete = True
+
+    @staticmethod
+    def _sender_name(chat: Chat, m) -> str | None:
+        if chat.kind == "group" and m.sender is not None:
+            return utils.get_display_name(m.sender)
+        return None
+
+    async def show_chat(self, chat_id: int) -> None:
+        """Yashirin chat ko'rinadigan bo'ldi — o'tkazib yuborilgan xabarlarni yuklab olamiz."""
+        async with SessionLocal() as s:
+            chat = await s.get(Chat, chat_id)
+            if chat is None:
+                return
+            client = self.clients.get(chat.account_id)
+            if client is None:
+                return
+            last = await store.max_tg_id(s, chat.id)
+            try:
+                await self._fetch_new(client, s, chat, input_peer(chat), last)
+            except Exception:  # noqa: BLE001
+                log.warning("Chat %s xabarlarini olib bo'lmadi", chat_id, exc_info=True)
+                return
+            await s.commit()
+        await store.publish_chat(chat)
+
+    async def click_button(self, message: Message, row: int, col: int) -> str | None:
+        async with SessionLocal() as s:
+            chat = await s.get(Chat, message.chat_id)
+            assert chat is not None
+        client = self._client(chat.account_id)
+        try:
+            tg_msg = await client.get_messages(input_peer(chat), ids=message.tg_id)
+            if tg_msg is None:
+                raise TelegramError("Xabar Telegram'da topilmadi.")
+            result = await tg_msg.click(row, col)
+        except TelegramError:
+            raise
+        except errors.BotResponseTimeoutError as exc:
+            raise TelegramError("Bot javob bermadi. Keyinroq urinib ko'ring.") from exc
+        except Exception as exc:  # noqa: BLE001
+            raise TelegramError(_human_error(exc)) from exc
+        if isinstance(result, types.messages.BotCallbackAnswer):
+            return result.message
+        return None
+
     async def load_older(self, chat_id: int, limit: int = 50) -> int:
         async with SessionLocal() as s:
             chat = await s.get(Chat, chat_id)
@@ -439,10 +551,7 @@ class TelegramManager(BaseTelegram):
             for m in msgs:
                 if getattr(m, "action", None) is not None:
                     continue
-                sender = None
-                if chat.peer_type != "user" and m.sender is not None:
-                    sender = utils.get_display_name(m.sender)
-                _, created = await store.save_message(s, chat, msg_data(m, sender), live=False)
+                _, created = await store.save_message(s, chat, msg_data(m, self._sender_name(chat, m)), live=False)
                 count += int(created)
             if len(msgs) < limit:
                 chat.history_complete = True
@@ -516,7 +625,6 @@ class TelegramManager(BaseTelegram):
                     tg_user_id=me.id,
                     name=utils.get_display_name(me) or pending.phone,
                     color=ACCOUNT_COLORS[count % len(ACCOUNT_COLORS)],
-                    include_groups=False,
                 )
                 s.add(acc)
             acc.username = me.username
@@ -525,9 +633,9 @@ class TelegramManager(BaseTelegram):
             acc.status = "active"
             acc.last_error = None
             await s.commit()
-            account_id, include_groups = acc.id, acc.include_groups
+            account_id = acc.id
             payload = account_dict(acc, True)
-        self._attach(account_id, client, include_groups, me.id)
+        self._attach(account_id, client, me.id)
         await hub.publish({"type": "account.update", "account": payload}, account_id=account_id)
         self._spawn(self._sync(account_id))
         return account_id
@@ -563,6 +671,8 @@ class TelegramManager(BaseTelegram):
         file_path: Path | None = None,
         as_document: bool = False,
     ) -> Message:
+        if not chat.can_send:
+            raise TelegramError("Bu chatga yozish huquqi yo'q.")
         client = self._client(chat.account_id)
         peer = input_peer(chat)
         try:

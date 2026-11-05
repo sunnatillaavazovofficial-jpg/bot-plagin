@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -11,7 +12,7 @@ from app.config import get_settings
 from app.db import SessionLocal
 from app.models import Chat, Message, TgAccount
 from app.telegram import manager as mgr
-from app.telegram.manager import TelegramManager, chat_data, input_peer, msg_data
+from app.telegram.manager import TelegramManager, chat_data, classify, extract_buttons, input_peer, msg_data
 
 
 def make_user(uid=555, **kw):
@@ -81,13 +82,59 @@ async def test_accept_rules(app):
     m = TelegramManager(get_settings())
     m.me_ids[1] = 999
     assert m._accept(1, make_user())
-    assert not m._accept(1, make_user(uid=777000))
-    assert not m._accept(1, make_user(bot=True))
-    assert not m._accept(1, make_user(uid=999))
+    assert m._accept(1, make_user(bot=True))  # botlar ham olinadi
+    assert not m._accept(1, make_user(uid=777000))  # kirish kodlari keladigan xizmat chati
+    assert not m._accept(1, make_user(uid=999))  # Saqlangan xabarlar
     group = types.Chat(id=5, title="G", photo=types.ChatPhotoEmpty(), participants_count=3, date=None, version=1)
-    assert not m._accept(1, group)
-    m.include_groups[1] = True
     assert m._accept(1, group)
+    left = types.Chat(id=6, title="G", photo=types.ChatPhotoEmpty(), participants_count=3, date=None, version=1, left=True)
+    assert not m._accept(1, left)
+    assert m._accept(1, make_channel(broadcast=True))
+    assert not m._accept(1, make_channel(broadcast=True, left=True))
+
+
+def make_channel(**kw):
+    return types.Channel(id=77, title="Kanal", photo=types.ChatPhotoEmpty(), date=None, access_hash=11, **kw)
+
+
+def test_classify_kinds():
+    assert classify(make_user()) == ("private", True)
+    assert classify(make_user(bot=True)) == ("bot", True)
+    group = types.Chat(id=5, title="G", photo=types.ChatPhotoEmpty(), participants_count=3, date=None, version=1)
+    assert classify(group) == ("group", True)
+    assert classify(make_channel(megagroup=True)) == ("group", True)
+    # Obuna bo'lingan kanal — yozib bo'lmaydi; o'z kanalimiz — yozsa bo'ladi
+    assert classify(make_channel(broadcast=True)) == ("channel", False)
+    assert classify(make_channel(broadcast=True, creator=True)) == ("channel", True)
+    rights = types.ChatAdminRights(post_messages=True)
+    assert classify(make_channel(broadcast=True, admin_rights=rights)) == ("channel", True)
+    banned = types.ChatBannedRights(until_date=None, send_messages=True)
+    assert classify(make_channel(megagroup=True, default_banned_rights=banned)) == ("group", False)
+
+
+def test_extract_buttons():
+    markup = types.ReplyInlineMarkup(
+        rows=[
+            types.KeyboardButtonRow(
+                buttons=[
+                    types.KeyboardButton(text="Balans", type=types.InlineButtonTypeCallback(data=b"b")),
+                    types.KeyboardButton(text="Sayt", type=types.InlineButtonTypeUrl(url="https://example.com")),
+                    types.KeyboardButton(text="Yomon", type=types.InlineButtonTypeUrl(url="javascript:alert(1)")),
+                ]
+            )
+        ]
+    )
+    rows = json.loads(extract_buttons(markup))
+    assert rows == [[
+        {"text": "Balans", "kind": "callback"},
+        {"text": "Sayt", "kind": "url", "url": "https://example.com"},
+        {"text": "Yomon", "kind": "other"},
+    ]]
+    reply = types.ReplyKeyboardMarkup(
+        rows=[types.KeyboardButtonRow(buttons=[types.KeyboardButton(text="Menyu", type=types.ButtonTypeDefault())])]
+    )
+    assert json.loads(extract_buttons(reply)) == [[{"text": "Menyu", "kind": "reply"}]]
+    assert extract_buttons(None) is None
 
 
 def test_human_errors():

@@ -77,7 +77,11 @@ class TgAccount(Base):
     session_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="active")  # active | error | logged_out
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    include_groups: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Yangi paydo bo'lgan chatlar saytda avtomatik ko'rinsinmi (tur bo'yicha)
+    show_private: Mapped[bool] = mapped_column(Boolean, default=True)
+    show_groups: Mapped[bool] = mapped_column(Boolean, default=False)
+    show_channels: Mapped[bool] = mapped_column(Boolean, default=False)
+    show_bots: Mapped[bool] = mapped_column(Boolean, default=False)
     synced_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
@@ -102,6 +106,18 @@ class Client(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
 
+class Folder(Base):
+    __tablename__ = "folders"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(64))
+    color: Mapped[str] = mapped_column(String(16), default="#64748b")
+    position: Mapped[int] = mapped_column(Integer, default=0)
+
+
+CHAT_KINDS = ("private", "bot", "group", "channel")
+
+
 class Chat(Base):
     __tablename__ = "chats"
     __table_args__ = (UniqueConstraint("account_id", "peer_id", name="uq_chat_peer"),)
@@ -110,6 +126,13 @@ class Chat(Base):
     account_id: Mapped[int] = mapped_column(ForeignKey("tg_accounts.id", ondelete="CASCADE"), index=True)
     peer_id: Mapped[int] = mapped_column(BigInteger)
     peer_type: Mapped[str] = mapped_column(String(16), default="user")  # user | chat | channel
+    kind: Mapped[str] = mapped_column(String(16), default="private", index=True)  # private | bot | group | channel
+    visible: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    muted: Mapped[bool] = mapped_column(Boolean, default=False)
+    can_send: Mapped[bool] = mapped_column(Boolean, default=True)
+    folder_id: Mapped[int | None] = mapped_column(
+        ForeignKey("folders.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     access_hash: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     title: Mapped[str] = mapped_column(String(255), default="")
     username: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -153,6 +176,7 @@ class Message(Base):
     media_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     sender_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     reply_to_tg_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    buttons: Mapped[str | None] = mapped_column(Text, nullable=True)  # bot tugmalari (JSON)
     sent_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

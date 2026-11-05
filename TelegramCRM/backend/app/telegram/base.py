@@ -71,7 +71,12 @@ class BaseTelegram:
     async def load_older(self, chat_id: int, limit: int = 50) -> int:
         return 0
 
-    def account_settings_changed(self, account_id: int, include_groups: bool) -> None: ...
+    async def show_chat(self, chat_id: int) -> None:
+        """Yashirin chat ko'rinadigan bo'lganda o'tkazib yuborilgan xabarlarni yuklaydi."""
+
+    async def click_button(self, message: Message, row: int, col: int) -> str | None:
+        """Bot xabaridagi tugmani bosish. Bot javobi (bo'lsa) qaytariladi."""
+        raise NotImplementedError
 
 
 class NotConfiguredTelegram(BaseTelegram):
@@ -100,6 +105,9 @@ class NotConfiguredTelegram(BaseTelegram):
         return None
 
     async def download_media(self, message: Message) -> Path:
+        raise TelegramError(self._msg)
+
+    async def click_button(self, message: Message, row: int, col: int) -> str | None:
         raise TelegramError(self._msg)
 
 

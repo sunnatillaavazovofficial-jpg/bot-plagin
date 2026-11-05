@@ -18,7 +18,7 @@ from .migrate import upgrade_database
 from .models import OrderStatus, User
 from .notify.bot import notify_bot
 from .notify.scheduler import run_forever
-from .routers import accounts, auth, chats, clients, orders, reports, settings, users, ws
+from .routers import accounts, auth, chats, clients, folders, orders, reports, settings, users, ws
 from .security import hash_password
 from .telegram.base import NotConfiguredTelegram, get_telegram, set_telegram
 
@@ -90,7 +90,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title="TelegramCRM", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
-    for module in (auth, users, accounts, chats, clients, orders, reports, settings, ws):
+    for module in (auth, users, accounts, chats, folders, clients, orders, reports, settings, ws):
         app.include_router(module.router)
 
     @app.get("/api/health")

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "./api";
 import { useLive } from "./live";
-import type { Account, Me, SettingsResp, Status, UserItem } from "./types";
+import type { Account, Folder, Me, SettingsResp, Status, UserItem } from "./types";
 
 interface Toast {
   id: number;
@@ -14,6 +14,7 @@ interface AppState {
   accounts: Account[];
   users: UserItem[];
   statuses: Status[];
+  folders: Folder[];
   settings: SettingsResp | null;
   counts: { unread: number; waiting: number };
   accountById: (id: number | null | undefined) => Account | undefined;
@@ -22,6 +23,7 @@ interface AppState {
   reloadAccounts: () => Promise<void>;
   reloadUsers: () => Promise<void>;
   reloadStatuses: () => Promise<void>;
+  reloadFolders: () => Promise<void>;
   reloadSettings: () => Promise<void>;
   reloadMe: () => Promise<void>;
   reloadCounts: () => void;
@@ -43,6 +45,7 @@ export function AppProvider({ initialMe, children }: { initialMe: Me; children: 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [statuses, setStatuses] = useState<Status[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [settings, setSettings] = useState<SettingsResp | null>(null);
   const [counts, setCounts] = useState({ unread: 0, waiting: 0 });
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -59,6 +62,7 @@ export function AppProvider({ initialMe, children }: { initialMe: Me; children: 
   }, []);
   const reloadUsers = useCallback(async () => setUsers(await api.get<UserItem[]>("/api/users")), []);
   const reloadStatuses = useCallback(async () => setStatuses(await api.get<Status[]>("/api/statuses")), []);
+  const reloadFolders = useCallback(async () => setFolders(await api.get<Folder[]>("/api/folders")), []);
   const reloadSettings = useCallback(async () => setSettings(await api.get<SettingsResp>("/api/settings")), []);
   const reloadMe = useCallback(async () => setMe(await api.get<Me>("/api/auth/me")), []);
   const reloadCounts = useCallback(() => {
@@ -72,11 +76,12 @@ export function AppProvider({ initialMe, children }: { initialMe: Me; children: 
     reloadAccounts().catch(() => undefined);
     reloadUsers().catch(() => undefined);
     reloadStatuses().catch(() => undefined);
+    reloadFolders().catch(() => undefined);
     reloadSettings().catch(() => undefined);
     reloadCounts();
     const t = window.setInterval(reloadCounts, 60000);
     return () => window.clearInterval(t);
-  }, [reloadAccounts, reloadUsers, reloadStatuses, reloadSettings, reloadCounts]);
+  }, [reloadAccounts, reloadUsers, reloadStatuses, reloadFolders, reloadSettings, reloadCounts]);
 
   useLive((e) => {
     if (e.type === "account.update") {
@@ -90,6 +95,8 @@ export function AppProvider({ initialMe, children }: { initialMe: Me; children: 
       setAccounts((list) => list.filter((a) => a.id !== e.account_id));
     } else if (e.type === "statuses.update") {
       reloadStatuses().catch(() => undefined);
+    } else if (e.type === "folders.update") {
+      reloadFolders().catch(() => undefined);
     }
     if (e.type === "message.new" || e.type === "chat.update" || e.type === "chats.reload") {
       reloadCountsDebounced();
@@ -113,6 +120,7 @@ export function AppProvider({ initialMe, children }: { initialMe: Me; children: 
       accounts,
       users,
       statuses,
+      folders,
       settings,
       counts,
       accountById: (id) => (id ? accMap.get(id) : undefined),
@@ -121,6 +129,7 @@ export function AppProvider({ initialMe, children }: { initialMe: Me; children: 
       reloadAccounts,
       reloadUsers,
       reloadStatuses,
+      reloadFolders,
       reloadSettings,
       reloadMe,
       reloadCounts,
@@ -128,7 +137,7 @@ export function AppProvider({ initialMe, children }: { initialMe: Me; children: 
       isAdmin: me.role === "admin",
       isManager: me.role === "admin" || me.role === "menejer",
     };
-  }, [me, accounts, users, statuses, settings, counts, reloadAccounts, reloadUsers, reloadStatuses, reloadSettings, reloadMe, reloadCounts, toast]);
+  }, [me, accounts, users, statuses, folders, settings, counts, reloadAccounts, reloadUsers, reloadStatuses, reloadFolders, reloadSettings, reloadMe, reloadCounts, toast]);
 
   return (
     <Ctx.Provider value={value}>

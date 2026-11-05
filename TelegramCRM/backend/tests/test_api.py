@@ -25,7 +25,10 @@ async def test_demo_accounts_and_chats(admin):
     accounts = (await admin.get("/api/accounts")).json()["accounts"]
     assert len(accounts) == 3
     chats = (await admin.get("/api/chats")).json()
-    assert len(chats) == 6
+    assert len(chats) == 11  # yashirin chatlar (Oila, Futbol yangiliklari) chiqmaydi
+    assert {c["title"] for c in chats}.isdisjoint({"Oila", "Futbol yangiliklari"})
+    private = (await admin.get("/api/chats", params={"kind": "private"})).json()
+    assert len(private) == 6 and all(c["kind"] == "private" for c in private)
     unread = (await admin.get("/api/chats", params={"filter": "unread"})).json()
     assert unread and all(c["unread_count"] > 0 for c in unread)
     only_first = (await admin.get("/api/chats", params={"account_id": accounts[0]["id"]})).json()

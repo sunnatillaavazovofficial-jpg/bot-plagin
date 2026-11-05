@@ -1,14 +1,17 @@
-import { ArrowDown, ArrowUp, Bell, Check, KeyRound, Plus, RefreshCw, Smartphone, Trash2, UserCog, Users } from "lucide-react";
+import { ArrowDown, ArrowUp, Bell, Check, KeyRound, ListChecks, Plus, RefreshCw, Smartphone, Trash2, UserCog, Users } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Field, Input, Modal, Select, cx } from "../components/ui";
 import { api } from "../lib/api";
 import { useApp } from "../lib/app";
 import { formatDateTime, ROLE_LABELS } from "../lib/format";
+import { KIND_LABELS, KINDS } from "../components/chatKinds";
+import ChatPicker from "./ChatPicker";
 import type { Account, Role, Status, UserItem } from "../lib/types";
 
 const TABS = [
   { key: "profile", label: "Profil", icon: UserCog, admin: false },
+  { key: "chats", label: "Chatlarni tanlash", icon: ListChecks, admin: false, manager: true },
   { key: "accounts", label: "Telegram akkauntlar", icon: Smartphone, admin: true },
   { key: "staff", label: "Xodimlar", icon: Users, admin: true },
   { key: "statuses", label: "Zakaz holatlari", icon: Check, admin: true },
@@ -18,8 +21,8 @@ const TABS = [
 export default function SettingsPage() {
   const { tab = "profile" } = useParams();
   const navigate = useNavigate();
-  const { isAdmin } = useApp();
-  const tabs = TABS.filter((t) => isAdmin || !t.admin);
+  const { isAdmin, isManager } = useApp();
+  const tabs = TABS.filter((t) => (t.admin ? isAdmin : "manager" in t ? isManager : true));
   const current = tabs.find((t) => t.key === tab) ?? tabs[0];
 
   return (
@@ -43,6 +46,7 @@ export default function SettingsPage() {
           </nav>
           <div className="min-w-0 flex-1">
             {current.key === "profile" && <ProfileTab />}
+            {current.key === "chats" && <ChatPicker />}
             {current.key === "accounts" && <AccountsTab />}
             {current.key === "staff" && <StaffTab />}
             {current.key === "statuses" && <StatusesTab />}
@@ -250,15 +254,23 @@ function AccountRow({ account: a, onAction }: { account: Account; onAction: (fn:
         {statusBadge}
       </div>
       {a.last_error && <div className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{a.last_error}</div>}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <label className="mr-auto flex items-center gap-2 text-sm text-slate-600">
-          <input
-            type="checkbox"
-            checked={a.include_groups}
-            onChange={(e) => onAction(() => api.patch(`/api/accounts/${a.id}`, { include_groups: e.target.checked }), "Saqlandi")}
-          />
-          Guruhlarni ham ko'rsatish
-        </label>
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+        <span className="text-xs font-medium text-slate-500">Yangi chatlar avtomatik ko'rinsin:</span>
+        {KINDS.map((k) => {
+          const field = k === "private" ? "show_private" : k === "group" ? "show_groups" : k === "channel" ? "show_channels" : "show_bots";
+          return (
+            <label key={k} className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={a[field]}
+                onChange={(e) => onAction(() => api.patch(`/api/accounts/${a.id}`, { [field]: e.target.checked }), "Saqlandi")}
+              />
+              {KIND_LABELS[k]}
+            </label>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
         {a.synced_at && <span className="text-xs text-slate-400">Sinxron: {formatDateTime(a.synced_at)}</span>}
         {a.status !== "logged_out" && (
           <Button size="sm" variant="secondary" onClick={() => onAction(() => api.post(`/api/accounts/${a.id}/resync`), "Sinxronlash boshlandi")}>
