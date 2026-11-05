@@ -137,6 +137,26 @@ burchagida «CRM» tugmasi paydo bo'ladi. U butun saytni Telegram ichida ochadi.
 parolsiz avtomatik kiradi. Telefon va kompyuterdagi Telegram ilovasida ishlaydi; brauzerdagi Telegram Web'da
 kirish saqlanmasligi mumkin, u holda saytni oddiy brauzerda oching.
 
+## Domen va Google / Yandex
+
+Bosh sahifa (`/` — o'zbekcha, `/ru` — ruscha) **ochiq**: unda kompaniya haqida matn, xizmatlar, kontaktlar va
+xodimlar uchun kirish formasi turadi. Google va Yandex faqat shu sahifani ko'radi. Chatlar, zakazlar, kassa
+va boshqa bo'limlar faqat parol bilan ochiladi va qidiruvga chiqmaydi (`robots.txt`, `noindex`).
+Kompaniya nomi kiritilmaguncha sayt qidiruv tizimlaridan butunlay yopiq turadi.
+
+1. **DNS** (domen sotib olingan joyda): `A @ → server IP` va `A www → server IP`.
+2. **`.env`:** `DOMAIN=media-max.net`, `WWW_DOMAIN=www.media-max.net`, `PUBLIC_URL=https://media-max.net`,
+   `COOKIE_SECURE=1`. Tayyor matn kerak bo'lsa: `SITE_PRESET=media-max` (faqat bo'sh maydonlarni to'ldiradi).
+   Keyin `docker compose up -d --build`.
+3. **Matnni tahrirlash:** Sozlamalar → «Ochiq sahifa (Google)».
+4. **Google Search Console:** «URL prefiksi» → `https://media-max.net` → «HTML teg». Tegni Sozlamalar'dagi
+   «Google tasdiqlash kodi» maydoniga yopishtiring, saqlang, «Tasdiqlash»ni bosing. «Sitemaps» → `sitemap.xml`.
+5. **Yandex Webmaster:** saytni qo'shing → «Meta-teg». Tegni «Yandex tasdiqlash kodi» maydoniga yopishtiring,
+   saqlang, «Проверить»ni bosing. «Индексирование → Файлы Sitemap» → `https://media-max.net/sitemap.xml`.
+
+Qidiruvda paydo bo'lishi bir necha kundan bir necha haftagacha oladi. Mahalliy qidiruv va xaritada chiqish uchun
+Google Business Profile va Yandex Бизнес'da ham kompaniyani ro'yxatdan o'tkazing.
+
 ## Kundalik ishlar
 
 Yangilash (yangi versiya chiqqanda):

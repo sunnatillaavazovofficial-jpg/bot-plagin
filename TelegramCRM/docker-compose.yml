@@ -19,6 +19,8 @@ services:
     environment:
       # Domen bo'lsa — avtomatik HTTPS. Bo'lmasa — oddiy http (80-port)
       DOMAIN: ${DOMAIN:-:80}
+      # www.domen → domen yo'naltirish (ixtiyoriy)
+      WWW_DOMAIN: ${WWW_DOMAIN:-:8082}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

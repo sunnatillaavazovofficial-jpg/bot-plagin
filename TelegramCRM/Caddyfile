@@ -10,3 +10,8 @@
 	}
 	reverse_proxy app:8000
 }
+
+# www.domen → domen (WWW_DOMAIN berilmasa, bu blok ichki 8082-portda jim turadi)
+{$WWW_DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}

@@ -1,7 +1,7 @@
-import { ArrowDown, ArrowUp, Bell, Check, KeyRound, ListChecks, Plus, RefreshCw, Smartphone, Trash2, UserCog, Users } from "lucide-react";
+import { ArrowDown, ArrowUp, Bell, Check, ExternalLink, Globe, KeyRound, ListChecks, Plus, RefreshCw, Smartphone, Trash2, UserCog, Users } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Field, Input, Modal, Select, cx } from "../components/ui";
+import { Button, Field, Input, Modal, Select, Textarea, cx } from "../components/ui";
 import { api } from "../lib/api";
 import { useApp } from "../lib/app";
 import { formatDateTime, ROLE_LABELS } from "../lib/format";
@@ -16,6 +16,7 @@ const TABS = [
   { key: "staff", label: "Xodimlar", icon: Users, admin: true },
   { key: "statuses", label: "Zakaz holatlari", icon: Check, admin: true },
   { key: "notify", label: "Eslatmalar", icon: Bell, admin: true },
+  { key: "site", label: "Ochiq sahifa (Google)", icon: Globe, admin: true },
 ];
 
 export default function SettingsPage() {
@@ -51,6 +52,7 @@ export default function SettingsPage() {
             {current.key === "staff" && <StaffTab />}
             {current.key === "statuses" && <StatusesTab />}
             {current.key === "notify" && <NotifyTab />}
+            {current.key === "site" && <SiteTab />}
           </div>
         </div>
       </div>
@@ -753,6 +755,130 @@ function NotifyTab() {
         <p className="text-sm text-slate-600">
           Baza har kuni soat 03:00 da avtomatik nusxalanadi (serverdagi <code>data/backups</code> papkasi, oxirgi 14 kun saqlanadi).
         </p>
+      </Card>
+    </>
+  );
+}
+
+/* ---------------- Ochiq sahifa (Google / Yandex) ---------------- */
+
+const SITE_FIELDS: { key: string; label: string; rows?: number; hint?: string; pair?: boolean }[] = [
+  { key: "site_title", label: "Google'dagi sarlavha (60 belgigacha)", pair: true },
+  { key: "site_tagline", label: "Shior (bosh sahifadagi katta matn)", pair: true },
+  { key: "site_about", label: "Kompaniya haqida", rows: 4, pair: true },
+  { key: "site_services", label: "Xizmatlar (har qatorda bittasi)", rows: 6, pair: true },
+  { key: "site_facts", label: "Raqamlar (har qatorda: «14+ yillik tajriba»)", rows: 4, pair: true },
+  { key: "site_address", label: "Manzil", pair: true },
+  { key: "site_hours", label: "Ish vaqti", pair: true },
+];
+
+function SiteTab() {
+  const { settings, reloadSettings, toast } = useApp();
+  const [values, setValues] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (settings) setValues(settings.values);
+  }, [settings]);
+
+  const set = (k: string, v: string) => setValues((s) => ({ ...s, [k]: v }));
+
+  async function save() {
+    const body: Record<string, string> = {};
+    for (const [k, v] of Object.entries(values)) if (k.startsWith("site_") || k.endsWith("_verification")) body[k] = v;
+    try {
+      await api.put("/api/settings", body);
+      await reloadSettings();
+      toast("Saqlandi");
+    } catch (e) {
+      toast((e as Error).message, "error");
+    }
+  }
+
+  if (!settings) return null;
+  const base = settings.public_url || location.origin;
+  const configured = !!values.site_name?.trim();
+  return (
+    <>
+      <Card title="Ochiq bosh sahifa" action={<Button onClick={save}>Saqlash</Button>}>
+        <div className={cx("mb-4 rounded-xl p-3 text-sm", configured ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900")}>
+          {configured
+            ? "Bosh sahifa ochiq: Google va Yandex kompaniya haqidagi matnni ko'radi. Chatlar, kassa va boshqa bo'limlar faqat parol bilan ochiladi va qidiruvga chiqmaydi."
+            : "Kompaniya nomi yozilmagan — sayt qidiruv tizimlaridan butunlay yopiq. Nomni yozib saqlasangiz, bosh sahifa ochiladi."}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Kompaniya nomi">
+            <Input id="site-name" value={values.site_name ?? ""} onChange={(e) => set("site_name", e.target.value)} placeholder="Mediamax" />
+          </Field>
+          <Field label="Telefon">
+            <Input id="site-phone" value={values.site_phone ?? ""} onChange={(e) => set("site_phone", e.target.value)} placeholder="+998 77 740 80 80" />
+          </Field>
+          <Field label="Telegram">
+            <Input id="site-telegram" value={values.site_telegram ?? ""} onChange={(e) => set("site_telegram", e.target.value)} placeholder="https://t.me/... yoki @username" />
+          </Field>
+          <Field label="Instagram">
+            <Input id="site-instagram" value={values.site_instagram ?? ""} onChange={(e) => set("site_instagram", e.target.value)} placeholder="https://instagram.com/..." />
+          </Field>
+          <Field label="Asosiy sayt">
+            <Input id="site-website" value={values.site_website ?? ""} onChange={(e) => set("site_website", e.target.value)} placeholder="https://..." />
+          </Field>
+        </div>
+        <div className="mt-4 space-y-4">
+          {SITE_FIELDS.map((f) => (
+            <div key={f.key} className="grid gap-3 sm:grid-cols-2">
+              {(["uz", "ru"] as const).map((l) => {
+                const key = `${f.key}_${l}`;
+                return (
+                  <Field key={key} label={`${f.label} — ${l === "uz" ? "o'zbekcha" : "ruscha"}`}>
+                    {f.rows ? (
+                      <Textarea id={key} rows={f.rows} value={values[key] ?? ""} onChange={(e) => set(key, e.target.value)} />
+                    ) : (
+                      <Input id={key} value={values[key] ?? ""} onChange={(e) => set(key, e.target.value)} />
+                    )}
+                  </Field>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2 text-sm">
+          <a href="/" target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-blue-600 hover:underline">
+            <ExternalLink size={14} /> O'zbekcha sahifa
+          </a>
+          <a href="/ru" target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-blue-600 hover:underline">
+            <ExternalLink size={14} /> Ruscha sahifa
+          </a>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">Sahifani tizimdan chiqib turib (yoki boshqa brauzerda) ko'ring — kirgan holda CRM ochiladi.</p>
+      </Card>
+
+      <Card title="Google va Yandex'da tasdiqlash">
+        <ol className="mb-4 list-decimal space-y-1.5 pl-5 text-sm text-slate-700">
+          <li>
+            <b>Google Search Console</b> → «URL prefiksi» → <code>{base}</code> → «HTML teg» usuli. Berilgan tegni to'liq shu yerga yopishtiring, saqlang va
+            Google'da «Tasdiqlash»ni bosing. Keyin «Sitemaps» bo'limiga <code>sitemap.xml</code> yozing.
+          </li>
+          <li>
+            <b>Yandex Webmaster</b> → sayt qo'shish → «Meta-teg» usuli. Tegni shu yerga yopishtiring, saqlang va «Проверить»ni bosing. Keyin «Индексирование →
+            Файлы Sitemap» ga <code>{base}/sitemap.xml</code> qo'shing.
+          </li>
+        </ol>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Google tasdiqlash kodi" hint="Butun <meta ...> tegini yopishtirsangiz ham bo'ladi">
+            <Input id="google-verification" value={values.google_verification ?? ""} onChange={(e) => set("google_verification", e.target.value)} />
+          </Field>
+          <Field label="Yandex tasdiqlash kodi" hint="Butun <meta ...> tegini yopishtirsangiz ham bo'ladi">
+            <Input id="yandex-verification" value={values.yandex_verification ?? ""} onChange={(e) => set("yandex_verification", e.target.value)} />
+          </Field>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+          <Button onClick={save}>Saqlash</Button>
+          <a href="/robots.txt" target="_blank" rel="noopener" className="text-blue-600 hover:underline">
+            robots.txt
+          </a>
+          <a href="/sitemap.xml" target="_blank" rel="noopener" className="text-blue-600 hover:underline">
+            sitemap.xml
+          </a>
+        </div>
       </Card>
     </>
   );

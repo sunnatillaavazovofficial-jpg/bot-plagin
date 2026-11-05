@@ -187,6 +187,7 @@ export interface SettingsResp {
   values: Record<string, string>;
   bot: { enabled: boolean; username: string | null; error: string | null; mini_app: boolean };
   telegram_configured: boolean;
+  public_url: string;
   fake_mode: boolean;
 }
 

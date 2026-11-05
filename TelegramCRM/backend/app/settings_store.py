@@ -16,6 +16,14 @@ DEFAULTS: dict[str, str] = {
     "notify_daily": "1",
     "notify_assign": "1",
 }
+# Ochiq bosh sahifa (Google/Yandex) — app/site.py; bo'sh bo'lsa sayt qidiruvdan yopiq
+for _key in (
+    "site_name", "site_title_uz", "site_title_ru", "site_tagline_uz", "site_tagline_ru", "site_about_uz", "site_about_ru",
+    "site_services_uz", "site_services_ru", "site_facts_uz", "site_facts_ru", "site_phone",
+    "site_address_uz", "site_address_ru", "site_hours_uz", "site_hours_ru",
+    "site_telegram", "site_instagram", "site_website", "google_verification", "yandex_verification",
+):
+    DEFAULTS[_key] = ""
 
 
 async def get_all(session: AsyncSession) -> dict[str, str]:

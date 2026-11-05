@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 
@@ -18,8 +18,10 @@ from .migrate import upgrade_database
 from .models import OrderStatus, User
 from .notify.bot import notify_bot
 from .notify.scheduler import run_forever
-from .routers import accounts, auth, chats, clients, finance, folders, orders, reports, settings, users, ws
+from .routers import accounts, auth, chats, clients, finance, folders, orders, public, reports, settings, users, ws
 from .security import hash_password
+from .settings_store import get_all
+from .site import apply_preset, page_lang, render_index, robots_txt, sitemap_xml
 from .telegram.base import NotConfiguredTelegram, get_telegram, set_telegram
 
 log = logging.getLogger("telegramcrm")
@@ -51,6 +53,10 @@ async def seed() -> None:
             await s.flush()
         if cfg.admin_tg_id:
             await link_admin_telegram(s, cfg.admin_tg_id)
+        if cfg.site_preset:
+            filled = await apply_preset(s, cfg.site_preset)
+            if filled:
+                log.info("Ochiq sahifa uchun %s ta maydon %s presetidan to'ldirildi", filled, cfg.site_preset)
         await s.commit()
 
 
@@ -109,7 +115,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title="TelegramCRM", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
-    for module in (auth, users, accounts, chats, folders, clients, orders, finance, reports, settings, ws):
+    for module in (auth, users, accounts, chats, folders, clients, orders, finance, reports, settings, public, ws):
         app.include_router(module.router)
 
     @app.get("/api/health")
@@ -125,16 +131,39 @@ def create_app() -> FastAPI:
     if (static_dir / "assets").is_dir():
         app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
 
+    def base_url(request: Request) -> str:
+        return get_settings().public_url or str(request.base_url).rstrip("/")
+
+    @app.get("/robots.txt", include_in_schema=False)
+    async def robots(request: Request):
+        async with SessionLocal() as s:
+            values = await get_all(s)
+        return PlainTextResponse(robots_txt(values, base_url(request)))
+
+    @app.get("/sitemap.xml", include_in_schema=False)
+    async def sitemap(request: Request):
+        async with SessionLocal() as s:
+            values = await get_all(s)
+        if not values.get("site_name", "").strip():
+            raise HTTPException(404, "Topilmadi")
+        return Response(sitemap_xml(base_url(request)), media_type="application/xml")
+
     @app.get("/{path:path}", include_in_schema=False)
-    async def spa(path: str):
+    async def spa(path: str, request: Request):
         if path.startswith("api/"):
             raise HTTPException(404, "Topilmadi")
         candidate = (static_dir / path).resolve()
         if path and candidate.is_file() and candidate.is_relative_to(static_dir.resolve()):
             return FileResponse(candidate)
-        if index.exists():
-            return FileResponse(index, headers={"Cache-Control": "no-cache"})
-        return JSONResponse({"detail": "Frontend yig'ilmagan (frontend/ papkada npm run build)"}, status_code=404)
+        if not index.exists():
+            return JSONResponse({"detail": "Frontend yig'ilmagan (frontend/ papkada npm run build)"}, status_code=404)
+        async with SessionLocal() as s:
+            values = await get_all(s)
+        page = render_index(index.read_text(encoding="utf-8"), values, path, base_url(request))
+        headers = {"Cache-Control": "no-cache"}
+        if page_lang(path) is None:
+            headers["X-Robots-Tag"] = "noindex, nofollow"
+        return HTMLResponse(page, headers=headers)
 
     return app
 
