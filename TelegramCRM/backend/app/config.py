@@ -37,6 +37,7 @@ class Settings:
     public_url: str
     admin_tg_id: int | None
     site_preset: str
+    tunnel_metrics: str
 
     @property
     def db_path(self) -> Path:
@@ -84,4 +85,5 @@ def get_settings() -> Settings:
         public_url=os.getenv("PUBLIC_URL", "").strip().rstrip("/"),
         admin_tg_id=_int_or_none(os.getenv("ADMIN_TG_ID")),
         site_preset=os.getenv("SITE_PRESET", "").strip().lower(),
+        tunnel_metrics=os.getenv("TUNNEL_METRICS", "").strip().rstrip("/"),
     )

@@ -32,6 +32,17 @@ services:
       - caddy-data:/data
       - caddy-config:/config
 
+  # Kompyuterni server qilganda (.env da COMPOSE_PROFILES=tunnel): bepul Cloudflare tunnel —
+  # sayt https://….trycloudflare.com manzilida hamma joydan ochiladi. Manzilni ilova o'zi aniqlaydi
+  # (.env: TUNNEL_METRICS=http://tunnel:2000) va botdagi «CRM» tugmasiga yozadi.
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --metrics 0.0.0.0:2000 --url http://app:8000
+    depends_on:
+      - app
+
 volumes:
   crm-data:
   caddy-data:

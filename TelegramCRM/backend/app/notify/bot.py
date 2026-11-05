@@ -60,13 +60,18 @@ class NotifyBot:
             log.warning(self.error)
             return
         await self.api("setMyCommands", {"commands": BOT_COMMANDS})
-        if public_url.startswith("https://"):
-            # Botdagi menyu tugmasi saytni Telegram ichida ochadi (Mini App)
-            self.mini_app = await self.api(
-                "setChatMenuButton",
-                {"menu_button": {"type": "web_app", "text": "CRM", "web_app": {"url": public_url}}},
-            )
+        await self.set_menu_url(public_url)
         self._task = asyncio.create_task(self._poll())
+
+    async def set_menu_url(self, url: str) -> bool:
+        """Botdagi «CRM» menyu tugmasi saytni Telegram ichida ochadi (Mini App). Faqat https bilan ishlaydi."""
+        if not url.startswith("https://"):
+            return False
+        self.mini_app = await self.api(
+            "setChatMenuButton",
+            {"menu_button": {"type": "web_app", "text": "CRM", "web_app": {"url": url}}},
+        )
+        return self.mini_app
 
     async def api(self, method: str, payload: dict) -> bool:
         self.calls.append((method, payload))

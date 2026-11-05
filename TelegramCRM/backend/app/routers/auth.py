@@ -47,18 +47,20 @@ async def login(data: LoginIn, request: Request, response: Response, session: As
         _fails[ip].append(now)
         raise HTTPException(401, "Login yoki parol noto'g'ri")
     _fails.pop(ip, None)
-    _set_cookie(response, user.id)
+    _set_cookie(response, user.id, request)
     return {"ok": True}
 
 
-def _set_cookie(response: Response, user_id: int) -> None:
+def _set_cookie(response: Response, user_id: int, request: Request) -> None:
+    # COOKIE_SECURE=1 bo'lsa doim, aks holda sayt https orqali ochilganda (masalan tunnel) Secure bo'ladi
+    secure = get_settings().cookie_secure or request.url.scheme == "https"
     response.set_cookie(
         TOKEN_COOKIE,
         create_token(user_id),
         max_age=TOKEN_DAYS * 86400,
         httponly=True,
         samesite="lax",
-        secure=get_settings().cookie_secure,
+        secure=secure,
     )
 
 
@@ -85,7 +87,7 @@ async def login_telegram(
         raise HTTPException(
             403, "Bu Telegram akkaunt hech bir xodimga bog'lanmagan. Saytga login bilan kirib, Profil → Botni ulash qiling."
         )
-    _set_cookie(response, user.id)
+    _set_cookie(response, user.id, request)
     return {"ok": True}
 
 

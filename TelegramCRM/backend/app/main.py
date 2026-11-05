@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTex
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 
+from . import tunnel
 from .config import get_settings
 from .db import SessionLocal, dispose_engine, init_engine
 from .migrate import upgrade_database
@@ -103,10 +104,15 @@ async def lifespan(app: FastAPI):
     await tg.start()
     await notify_bot.start(cfg.bot_token, cfg.public_url)
     scheduler = asyncio.create_task(run_forever())
+    tunnel.reset()
+    # Kompyuter server bo'lganda: Cloudflare tunnel manzilini kuzatadi (TUNNEL_METRICS=http://tunnel:2000)
+    tunnel_task = asyncio.create_task(tunnel.watch(cfg.tunnel_metrics)) if cfg.tunnel_metrics else None
     try:
         yield
     finally:
         scheduler.cancel()
+        if tunnel_task:
+            tunnel_task.cancel()
         await notify_bot.stop()
         await get_telegram().stop()
         set_telegram(NotConfiguredTelegram())
@@ -132,7 +138,7 @@ def create_app() -> FastAPI:
         app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
 
     def base_url(request: Request) -> str:
-        return get_settings().public_url or str(request.base_url).rstrip("/")
+        return tunnel.public_url() or str(request.base_url).rstrip("/")
 
     @app.get("/robots.txt", include_in_schema=False)
     async def robots(request: Request):
@@ -169,4 +175,6 @@ def create_app() -> FastAPI:
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+# httpx har bir so'rovni yozadi (bot tokeni ham manzilda bo'ladi) — faqat xatolar qolsin
+logging.getLogger("httpx").setLevel(logging.WARNING)
 app = create_app()

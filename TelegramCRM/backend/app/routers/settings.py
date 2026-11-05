@@ -5,7 +5,6 @@ import re
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..config import get_settings
 from ..db import get_session
 from ..deps import admin_only, current_user
 from ..models import User
@@ -14,6 +13,7 @@ from ..notify.scheduler import backup_database
 from ..settings_store import DEFAULTS, get_all, set_many
 from ..site import clean_verification
 from ..telegram.base import get_telegram
+from ..tunnel import public_url
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -31,7 +31,7 @@ async def read_settings(_: User = Depends(current_user), session: AsyncSession =
             "mini_app": notify_bot.mini_app,
         },
         "telegram_configured": tg.configured,
-        "public_url": get_settings().public_url,
+        "public_url": public_url(),
         "fake_mode": type(tg).__name__ == "FakeTelegram",
     }
 

@@ -47,6 +47,23 @@ telefon raqam, kod va kerak bo'lsa ikki bosqichli parol bilan ulanadi.
 3. **Server (VPS).** Ubuntu 22.04 yoki 24.04, kamida 1 GB RAM (taxminan oyiga 5$, masalan Hetzner, DigitalOcean yoki mahalliy hosting).
 4. **Domen (tavsiya etiladi).** Masalan `crm.sizning-domeningiz.uz`. Domenning A-yozuvini server IP manziliga yo'naltiring. Domen bo'lsa sayt avtomatik HTTPS bilan ishlaydi.
 
+## Kompyuterni server qilish (Windows 10/11)
+
+Server (VPS) hali bo'lmasa, CRM'ni ofisdagi kompyuterda ishlatish mumkin. Sayt bepul Cloudflare tunnel orqali `https://….trycloudflare.com` manzilida ochiladi:
+- hamma joydan, telefonda mobil internetdan ham;
+- Telegram ichida ham («CRM» tugmasi).
+
+1. [`KOMPYUTER_SERVER.bat`](KOMPYUTER_SERVER.bat) faylini yuklab oling (GitHub'da «Download raw file») va ikki marta bosing.
+2. Docker Desktop bo'lmasa, skript uni o'rnatadi. Windows ruxsat so'rasa «Ha»ni bosing. O'rnatilgach kompyuterni qayta yoqing va faylni yana ishga tushiring.
+3. Skript bir necha savol beradi: admin paroli, bot tokeni, Telegram ID, API ID/HASH. Keyin saytni ishga tushiradi va manzilini ko'rsatadi.
+
+Dastur `%USERPROFILE%\TelegramCRM-server` papkasiga o'rnatiladi. Faylni qayta ishga tushirish xavfsiz: dastur yangilanadi, sozlamalar va ma'lumotlar saqlanadi.
+
+Bilib qo'ying:
+- **Manzil o'zgaradi.** Bepul tunnel manzili kompyuter (yoki Docker) qayta yoqilganda o'zgaradi. Ilova yangi manzilni o'zi aniqlaydi, botdagi «CRM» tugmasini yangilaydi va Telegram ulangan xodimlarga yangi manzilni yuboradi.
+- **Kompyuter yoniq turishi kerak.** Kompyuter o'chsa, uxlab qolsa yoki internet uzilsa, sayt ishlamaydi. Skript rozetkadagi kompyuterning uxlab qolishini o'chiradi. Qayta yonganda Windows'ga kirilsa, Docker va sayt o'zi ishga tushadi.
+- **Google/Yandex uchun mos emas.** Bu yo'l vaqtinchalik. Doimiy manzil uchun server (VPS) va domen kerak — pastdagi bo'limga qarang.
+
 ## Serverga o'rnatish
 
 ### Eng oson yo'l: bitta skript
