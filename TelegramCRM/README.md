@@ -67,6 +67,24 @@ DOMAIN=sizning.domeningiz BOT_TOKEN=bot_tokeni ADMIN_TG_ID=telegram_id_raqamingi
 Oxirida sayt manzili, login va (birinchi marta) admin paroli ekranga chiqadi. Keyinroq `TG_API_ID=… TG_API_HASH=…`
 bilan qayta ishga tushirsangiz, Telegram akkauntlarni ulash yoqiladi.
 
+**`.env` ni kompyuterda to'ldirgan bo'lsangiz** (Windows): avval faylni serverga yuboring (PowerShell'da), keyin
+skriptni shu fayl bilan ishga tushiring. Windows qator oxirlari avtomatik tuzatiladi, admin paroli fayldagi
+`ADMIN_PASSWORD` ga o'rnatiladi, bo'sh `SECRET_KEY` o'zi to'ldiriladi:
+
+```bash
+scp "C:\Users\Siz\Desktop\TelegramCRM\.env" root@SERVER_IP:/root/crm.env
+```
+
+```bash
+ENV_FILE=/root/crm.env bash install.sh
+```
+
+**Admin parolini unutdingizmi?** Serverda:
+
+```bash
+cd ~/bot-plagin/TelegramCRM && docker compose exec app python -m app.cli reset-password admin YangiParol123
+```
+
 ### Qo'lda o'rnatish
 
 

@@ -195,3 +195,16 @@ async def test_notifications(app, admin):
     await check_deadlines(today)
     await daily_summary(today)
     assert notify_bot.sent == []
+
+
+async def test_cli_reset_password(app):
+    from app.cli import reset_password
+    from app.db import init_engine
+
+    assert await reset_password("admin", "yangiParol9") == "yangilandi"
+    assert await reset_password("boss", "boshqaParol9") == "yaratildi"
+    init_engine()  # CLI o'z ulanishini yopadi — test ilovasi uchun qayta ochamiz
+    for login_name, password in (("admin", "yangiParol9"), ("boss", "boshqaParol9")):
+        client = await login(app, login_name, password)
+        assert (await client.get("/api/auth/me")).json()["role"] == "admin"
+        await client.aclose()
