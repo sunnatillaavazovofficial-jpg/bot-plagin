@@ -1,4 +1,4 @@
-import { BarChart3, ClipboardList, LogOut, MessageCircle, Settings, Users, WifiOff } from "lucide-react";
+import { BarChart3, ClipboardList, LogOut, MessageCircle, Settings, Users, Wallet, WifiOff } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { api } from "../lib/api";
 import { useApp } from "../lib/app";
@@ -14,6 +14,7 @@ export default function Layout() {
   const items = [
     hasChats && { to: "/chats", label: "Chatlar", icon: MessageCircle, badge: counts.unread },
     { to: "/orders", label: "Zakazlar", icon: ClipboardList },
+    isManager && { to: "/finance", label: "Kassa", icon: Wallet },
     isManager && { to: "/clients", label: "Mijozlar", icon: Users },
     isAdmin && { to: "/reports", label: "Hisobot", icon: BarChart3 },
     { to: "/settings", label: "Sozlamalar", icon: Settings },

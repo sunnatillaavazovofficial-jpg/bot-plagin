@@ -198,4 +198,77 @@ export type LiveEvent =
   | { type: "account.deleted"; account_id: number }
   | { type: "order.update"; order_id: number; status_id?: number; deleted?: boolean }
   | { type: "statuses.update" }
-  | { type: "folders.update" };
+  | { type: "folders.update" }
+  | { type: "finance.update" };
+
+export type TxKind = "kirim" | "chiqim" | "otkazma";
+
+export interface Category {
+  id: number;
+  name: string;
+  kind: "kirim" | "chiqim";
+  color: string;
+  position: number;
+  system_key: string | null;
+  used?: number;
+}
+
+export interface Transaction {
+  id: number;
+  kind: TxKind;
+  amount: number;
+  date: string;
+  method: string;
+  to_method: string | null;
+  category_id: number | null;
+  category_name: string | null;
+  category_color: string | null;
+  note: string | null;
+  client_id: number | null;
+  client_name: string | null;
+  order_id: number | null;
+  order_number: string | null;
+  debt_id: number | null;
+  source: "site" | "bot" | "order";
+  created_by_id: number | null;
+  created_at: string;
+}
+
+export interface Debt {
+  id: number;
+  direction: "bizga" | "bizdan";
+  person: string;
+  phone: string | null;
+  client_id: number | null;
+  amount: number;
+  paid: number;
+  remaining: number;
+  note: string | null;
+  due_date: string | null;
+  created_at: string;
+  closed_at: string | null;
+  created_by_id: number | null;
+}
+
+export interface OrderDebt {
+  order_id: number;
+  number: string;
+  title: string;
+  client_id: number | null;
+  client_name: string | null;
+  price: number;
+  paid: number;
+  remaining: number;
+  deadline: string | null;
+}
+
+export interface FinanceSummary {
+  date_from: string;
+  date_to: string;
+  balances: Record<string, number>;
+  totals: { kirim: number; chiqim: number; foyda: number };
+  kirim_by_category: { category_id: number | null; name: string; color: string; amount: number }[];
+  chiqim_by_category: { category_id: number | null; name: string; color: string; amount: number }[];
+  daily: { date: string; kirim: number; chiqim: number }[];
+  debts: { bizga: number; bizdan: number; zakazlar: number };
+}

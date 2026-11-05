@@ -7,6 +7,7 @@ import { AppProvider } from "./lib/app";
 import { startLive, stopLive } from "./lib/live";
 import type { Me } from "./lib/types";
 import ClientsPage from "./pages/Clients";
+import FinancePage from "./pages/Finance";
 import InboxPage from "./pages/Inbox";
 import LoginPage from "./pages/Login";
 import OrdersPage from "./pages/Orders";
@@ -58,6 +59,8 @@ export default function App() {
             <Route path="/orders/:orderId" element={<OrdersPage />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/clients/:clientId" element={<ClientsPage />} />
+            <Route path="/finance" element={<FinancePage />} />
+            <Route path="/finance/:tab" element={<FinancePage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/settings/:tab" element={<SettingsPage />} />
