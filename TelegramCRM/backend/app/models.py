@@ -222,18 +222,65 @@ class Order(Base):
     closed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
 
-class Payment(Base):
-    __tablename__ = "payments"
+TX_KINDS = ("kirim", "chiqim", "otkazma")
+PAY_METHODS = ("naqd", "karta", "o'tkazma", "boshqa")
+
+
+class Category(Base):
+    """Kassa toifasi (kirim yoki chiqim)."""
+
+    __tablename__ = "categories"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(64))
+    kind: Mapped[str] = mapped_column(String(8))  # kirim | chiqim
+    color: Mapped[str] = mapped_column(String(16), default="#64748b")
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    # Tizim toifalari: order_payment (zakaz to'lovi), refund (qaytarilgan pul), opening (boshlang'ich qoldiq)
+    system_key: Mapped[str | None] = mapped_column(String(32), nullable=True, unique=True)
+
+
+class Debt(Base):
+    """Qarz daftari: bizga (bizdan qarzdor) yoki bizdan (biz qarzdormiz)."""
+
+    __tablename__ = "debts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    direction: Mapped[str] = mapped_column(String(8))  # bizga | bizdan
+    person: Mapped[str] = mapped_column(String(200))
+    phone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    client_id: Mapped[int | None] = mapped_column(ForeignKey("clients.id", ondelete="SET NULL"), nullable=True)
     amount: Mapped[int] = mapped_column(BigInteger)
-    method: Mapped[str] = mapped_column(String(32), default="naqd")
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
-    created_by_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    closed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+
+class Transaction(Base):
+    """Kassa yozuvi: kirim, chiqim yoki o'tkazma (naqd ⇄ karta)."""
+
+    __tablename__ = "transactions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(8), index=True)
+    amount: Mapped[int] = mapped_column(BigInteger)
+    date: Mapped[date] = mapped_column(Date, index=True)
+    method: Mapped[str] = mapped_column(String(16), default="naqd")
+    to_method: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    category_id: Mapped[int | None] = mapped_column(
+        ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    client_id: Mapped[int | None] = mapped_column(ForeignKey("clients.id", ondelete="SET NULL"), nullable=True)
+    order_id: Mapped[int | None] = mapped_column(
+        ForeignKey("orders.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    debt_id: Mapped[int | None] = mapped_column(ForeignKey("debts.id", ondelete="SET NULL"), nullable=True, index=True)
+    source: Mapped[str] = mapped_column(String(8), default="site")  # site | bot | order
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
 
 class OrderFile(Base):

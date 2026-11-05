@@ -228,6 +228,8 @@ class FakeTelegram(BaseTelegram):
                     chat.read_outbox_max_id = len(messages)
                     chat.muted = kind == "channel"
             await s.commit()
+        if self.settings.demo_finance:
+            await seed_demo_finance()
 
     async def _simulate(self) -> None:
         while True:
@@ -392,3 +394,46 @@ def _guess_mime(path: Path) -> str:
 
     return mimetypes.guess_type(path.name)[0] or "application/octet-stream"
 
+
+async def seed_demo_finance() -> None:
+    """Demo kassa: boshlang'ich qoldiq, bir necha kirim-chiqim va qarzlar."""
+    from sqlalchemy import select as _select
+
+    from ..finance import create_transaction
+    from ..models import Category, Debt, Transaction
+    from ..timeutil import local_today
+
+    async with SessionLocal() as s:
+        if await s.scalar(_select(func.count(Transaction.id))):
+            return
+        cats = {c.name: c.id for c in (await s.scalars(_select(Category))).all()}
+        today = local_today()
+        entries = [
+            (20, "kirim", 6_000_000, "naqd", "Boshlang'ich qoldiq", "Oy boshidagi kassa"),
+            (18, "chiqim", 1_350_000, "naqd", "Material", "Akril 3 mm, 3 list"),
+            (15, "chiqim", 4_000_000, "karta", "Ijara", "Ustaxona ijarasi"),
+            (12, "kirim", 2_500_000, "karta", "Avans", "Grand Mebel — peshtaxta avansi"),
+            (9, "chiqim", 380_000, "naqd", "Transport", "Montajga Damas"),
+            (6, "kirim", 1_200_000, "naqd", "Boshqa kirim", "Vizitka va stikerlar"),
+            (4, "chiqim", 640_000, "naqd", "Material", "LED modul 180 dona"),
+            (2, "chiqim", 3_000_000, "naqd", "Oylik", "Ustalarga avans"),
+            (1, "kirim", 800_000, "karta", "Avans", "Bek Qurilish — banner"),
+        ]
+        for days_ago, kind, amount, method, cat, note in entries:
+            await create_transaction(
+                s,
+                kind=kind,
+                amount=amount,
+                method=method,
+                day=today - timedelta(days=days_ago),
+                category_id=cats.get(cat),
+                note=note,
+                user_id=1,
+            )
+        await create_transaction(s, kind="otkazma", amount=1_000_000, method="naqd", to_method="karta",
+                                 day=today - timedelta(days=3), note="Kartaga o'tkazildi", user_id=1)
+        s.add(Debt(direction="bizga", person="Anvar aka (Chilonzor)", phone="+998901112244", amount=1_500_000,
+                   note="Stend uchun nasiya", due_date=today + timedelta(days=5), created_by_id=1))
+        s.add(Debt(direction="bizdan", person="Akril ta'minotchi", phone="+998935553311", amount=2_400_000,
+                   note="Akril va PVX nasiyaga olindi", due_date=today - timedelta(days=1), created_by_id=1))
+        await s.commit()

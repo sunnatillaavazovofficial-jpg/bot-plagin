@@ -6,16 +6,18 @@ import json
 from datetime import date, datetime
 
 from .models import (
+    Category,
     Chat,
     Client,
+    Debt,
     Folder,
     Message,
     Order,
     OrderEvent,
     OrderFile,
     OrderStatus,
-    Payment,
     TgAccount,
+    Transaction,
     User,
 )
 
@@ -166,15 +168,72 @@ def order_dict(o: Order, client_name: str | None = None) -> dict:
     }
 
 
-def payment_dict(p: Payment) -> dict:
+def payment_dict(t: Transaction) -> dict:
+    """Zakaz to'lovi (kassa yozuvi). Qaytarilgan pul manfiy summa bilan."""
     return {
-        "id": p.id,
-        "order_id": p.order_id,
-        "amount": p.amount,
-        "method": p.method,
-        "note": p.note,
-        "created_at": _dt(p.created_at),
-        "created_by_id": p.created_by_id,
+        "id": t.id,
+        "order_id": t.order_id,
+        "amount": t.amount if t.kind == "kirim" else -t.amount,
+        "method": t.method,
+        "note": t.note,
+        "created_at": _dt(t.created_at),
+        "created_by_id": t.created_by_id,
+    }
+
+
+def category_dict(c: Category) -> dict:
+    return {
+        "id": c.id,
+        "name": c.name,
+        "kind": c.kind,
+        "color": c.color,
+        "position": c.position,
+        "system_key": c.system_key,
+    }
+
+
+def tx_dict(
+    t: Transaction,
+    category: Category | None = None,
+    client_name: str | None = None,
+) -> dict:
+    return {
+        "id": t.id,
+        "kind": t.kind,
+        "amount": t.amount,
+        "date": _d(t.date),
+        "method": t.method,
+        "to_method": t.to_method,
+        "category_id": t.category_id,
+        "category_name": category.name if category else None,
+        "category_color": category.color if category else None,
+        "note": t.note,
+        "client_id": t.client_id,
+        "client_name": client_name,
+        "order_id": t.order_id,
+        "order_number": f"#{t.order_id:04d}" if t.order_id else None,
+        "debt_id": t.debt_id,
+        "source": t.source,
+        "created_by_id": t.created_by_id,
+        "created_at": _dt(t.created_at),
+    }
+
+
+def debt_dict(d: Debt, paid: int) -> dict:
+    return {
+        "id": d.id,
+        "direction": d.direction,
+        "person": d.person,
+        "phone": d.phone,
+        "client_id": d.client_id,
+        "amount": d.amount,
+        "paid": paid,
+        "remaining": max(d.amount - paid, 0),
+        "note": d.note,
+        "due_date": _d(d.due_date),
+        "created_at": _dt(d.created_at),
+        "closed_at": _dt(d.closed_at),
+        "created_by_id": d.created_by_id,
     }
 
 

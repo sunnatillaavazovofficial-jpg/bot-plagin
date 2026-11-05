@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
 from ..deps import admin_only
-from ..models import Chat, Client, Message, Order, OrderStatus, Payment, TgAccount, User
+from ..finance import system_category
+from ..models import Chat, Client, Message, Order, OrderStatus, TgAccount, Transaction, User
 from ..timeutil import local_today, tz
 
 router = APIRouter(prefix="/api/reports", tags=["reports"], dependencies=[Depends(admin_only)])
@@ -44,13 +45,23 @@ async def summary(
     users = {u.id: u for u in (await session.scalars(select(User))).all()}
     accounts = {a.id: a for a in (await session.scalars(select(TgAccount).order_by(TgAccount.id))).all()}
 
-    payments = (
+    # Kassa yozuvlari (kirim va chiqim). Boshlang'ich qoldiq daromad hisoblanmaydi.
+    opening = await system_category(session, "opening")
+    tx_rows = (
         await session.execute(
-            select(Payment, Order.assignee_id, Order.account_id, Order.client_id)
-            .join(Order, Order.id == Payment.order_id)
-            .where(Payment.created_at >= start, Payment.created_at < end)
+            select(Transaction, Order.assignee_id, Order.account_id)
+            .outerjoin(Order, Order.id == Transaction.order_id)
+            .where(
+                Transaction.date >= date_from,
+                Transaction.date <= date_to,
+                Transaction.kind.in_(("kirim", "chiqim")),
+            )
         )
     ).all()
+    tx_rows = [r for r in tx_rows if opening is None or r[0].category_id != opening.id]
+    # (tx, assignee_id, account_id, client_id) — faqat kirimlar «tushum» hisoblanadi
+    payments = [(t, assignee, account, t.client_id) for t, assignee, account in tx_rows if t.kind == "kirim"]
+    expenses = [t for t, *_ in tx_rows if t.kind == "chiqim"]
     created = (await session.scalars(select(Order).where(Order.created_at >= start, Order.created_at < end))).all()
     closed = (
         await session.scalars(select(Order).where(Order.closed_at >= start, Order.closed_at < end))
@@ -59,17 +70,20 @@ async def summary(
 
     # Kunlik grafik
     days = [date_from + timedelta(days=i) for i in range((date_to - date_from).days + 1)]
-    daily = {d: {"date": d.isoformat(), "revenue": 0, "orders": 0} for d in days}
+    daily = {d: {"date": d.isoformat(), "revenue": 0, "expense": 0, "orders": 0} for d in days}
     for p, *_ in payments:
-        day = _local_day(p.created_at)
-        if day in daily:
-            daily[day]["revenue"] += p.amount
+        if p.date in daily:
+            daily[p.date]["revenue"] += p.amount
+    for t in expenses:
+        if t.date in daily:
+            daily[t.date]["expense"] += t.amount
     for o in created:
         day = _local_day(o.created_at)
         if day in daily:
             daily[day]["orders"] += 1
 
     revenue = sum(p.amount for p, *_ in payments)
+    expense = sum(t.amount for t in expenses)
     live_created = [o for o in created if not (statuses.get(o.status_id) and statuses[o.status_id].is_cancel)]
     order_sum = sum(o.price for o in live_created)
 
@@ -182,6 +196,8 @@ async def summary(
         "date_to": date_to.isoformat(),
         "kpi": {
             "revenue": revenue,
+            "expense": expense,
+            "profit": revenue - expense,
             "orders_created": len(live_created),
             "orders_done": len(done),
             "order_sum": order_sum,

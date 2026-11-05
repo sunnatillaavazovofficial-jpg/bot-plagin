@@ -9,7 +9,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import SessionLocal
-from ..models import AccountAccess, Chat, Client, NotifyLog, Order, OrderStatus, Payment, TgAccount, User, utcnow
+from ..finance import balances, period_totals
+from ..models import AccountAccess, Chat, Client, NotifyLog, Order, OrderStatus, TgAccount, User, utcnow
 from ..settings_store import as_bool, get_all
 from ..timeutil import tz
 from .bot import notify_users
@@ -121,6 +122,9 @@ async def check_unanswered() -> int:
         rows = (
             await s.scalars(
                 select(Chat).where(
+                    Chat.kind == "private",
+                    Chat.visible.is_(True),
+                    Chat.muted.is_(False),
                     Chat.last_message_out.is_(False),
                     Chat.last_incoming_at.is_not(None),
                     Chat.last_incoming_at < border,
@@ -159,9 +163,9 @@ async def daily_summary(today: date) -> int:
         await s.commit()
         start = datetime.combine(today - timedelta(days=1), time.min, tzinfo=tz())
         end = datetime.combine(today, time.min, tzinfo=tz())
-        paid = await s.scalar(
-            select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.created_at >= start, Payment.created_at < end)
-        )
+        yesterday = today - timedelta(days=1)
+        totals = await period_totals(s, yesterday, yesterday)
+        kassa = await balances(s)
         new_orders = await s.scalar(select(func.count(Order.id)).where(Order.created_at >= start, Order.created_at < end))
         open_q = select(Order).join(OrderStatus, OrderStatus.id == Order.status_id).where(
             OrderStatus.is_done.is_(False), OrderStatus.is_cancel.is_(False)
@@ -174,10 +178,14 @@ async def daily_summary(today: date) -> int:
             .join(OrderStatus, OrderStatus.id == Order.status_id)
             .where(OrderStatus.is_cancel.is_(False), Order.price > Order.paid)
         )
-        unread = await s.scalar(select(func.count(Chat.id)).where(Chat.unread_count > 0))
+        unread = await s.scalar(
+            select(func.count(Chat.id)).where(Chat.unread_count > 0, Chat.visible.is_(True), Chat.muted.is_(False))
+        )
         lines = [
             f"☀️ <b>{esc(settings['company_name'])}</b> — {today.strftime('%d.%m.%Y')}",
-            f"Kecha: {new_orders or 0} ta yangi zakaz, tushum {fmt_sum(int(paid or 0))}",
+            f"Kecha: {new_orders or 0} ta yangi zakaz",
+            f"Kecha kirim: {fmt_sum(totals['kirim'])}, chiqim: {fmt_sum(totals['chiqim'])}, foyda: {fmt_sum(totals['foyda'])}",
+            f"Kassa qoldig'i: {fmt_sum(kassa['jami'])} (naqd {fmt_sum(kassa['naqd'])}, karta {fmt_sum(kassa['karta'])})",
             f"Jarayonda: {len(open_orders)} ta zakaz",
             f"Bugun topshiriladi: {len(due_today)} ta",
             f"Muddati o'tgan: {len(overdue)} ta",

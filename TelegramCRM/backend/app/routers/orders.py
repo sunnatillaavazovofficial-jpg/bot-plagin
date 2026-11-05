@@ -13,7 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import get_settings
 from ..db import get_session
 from ..deps import admin_only, allowed_accounts, current_user, get_chat_checked, get_order_checked, staff_manager
-from ..models import Chat, Client, Message, Order, OrderEvent, OrderFile, OrderStatus, Payment, User, utcnow
+from ..finance import FinanceError, create_transaction, delete_transaction
+from ..models import Chat, Client, Message, Order, OrderEvent, OrderFile, OrderStatus, Transaction, User, utcnow
 from ..notify.events import order_assigned
 from ..serializers import event_dict, file_dict, order_dict, payment_dict, status_dict
 from ..telegram.base import TelegramError, get_telegram
@@ -245,7 +246,13 @@ async def get_order(order_id: int, user: User = Depends(current_user), session: 
     data["client_phone"] = client.phone if client else None
     data["payments"] = [
         payment_dict(p)
-        for p in (await session.scalars(select(Payment).where(Payment.order_id == order.id).order_by(Payment.id))).all()
+        for p in (
+            await session.scalars(
+                select(Transaction)
+                .where(Transaction.order_id == order.id, Transaction.kind.in_(("kirim", "chiqim")))
+                .order_by(Transaction.id)
+            )
+        ).all()
     ]
     data["files"] = [
         file_dict(f)
@@ -381,43 +388,49 @@ class PaymentIn(BaseModel):
     note: str | None = None
 
 
-async def _recalc_paid(session: AsyncSession, order: Order) -> None:
-    total = await session.scalar(select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.order_id == order.id))
-    order.paid = int(total or 0)
-
-
 @router.post("/orders/{order_id}/payments")
 async def add_payment(
     order_id: int, data: PaymentIn, user: User = Depends(staff_manager), session: AsyncSession = Depends(get_session)
 ):
+    """Zakaz to'lovi — kassaga kirim bo'lib yoziladi (manfiy summa — qaytarilgan pul, chiqim)."""
     order = await get_order_checked(session, user, order_id)
     if data.amount == 0:
         raise HTTPException(400, "Summani kiriting")
     method = data.method if data.method in PAYMENT_METHODS else "boshqa"
-    payment = Payment(order_id=order.id, amount=data.amount, method=method, note=data.note, created_by_id=user.id)
-    session.add(payment)
-    await session.flush()
-    await _recalc_paid(session, order)
+    try:
+        tx = await create_transaction(
+            session,
+            kind="kirim" if data.amount > 0 else "chiqim",
+            amount=abs(data.amount),
+            method=method,
+            note=data.note or f"Zakaz #{order.id:04d}",
+            order_id=order.id,
+            user_id=user.id,
+            source="order",
+        )
+    except FinanceError as exc:
+        raise HTTPException(400, str(exc)) from exc
     label = "To'lov" if data.amount > 0 else "Qaytarildi"
     session.add(OrderEvent(order_id=order.id, user_id=user.id, kind="payment", text=f"{label}: {fmt_sum(abs(data.amount))} ({method})"))
     await session.commit()
     await publish_order(order)
-    return payment_dict(payment)
+    await hub.publish({"type": "finance.update"})
+    return payment_dict(tx)
 
 
 @router.delete("/payments/{payment_id}", dependencies=[Depends(admin_only)])
 async def delete_payment(payment_id: int, user: User = Depends(admin_only), session: AsyncSession = Depends(get_session)):
-    payment = await session.get(Payment, payment_id)
-    if payment is None:
+    tx = await session.get(Transaction, payment_id)
+    if tx is None or tx.order_id is None:
         raise HTTPException(404, "To'lov topilmadi")
-    order = await session.get(Order, payment.order_id)
+    order = await session.get(Order, tx.order_id)
     assert order is not None
-    await session.delete(payment)
-    await session.flush()
-    await _recalc_paid(session, order)
-    session.add(OrderEvent(order_id=order.id, user_id=user.id, kind="payment", text=f"To'lov o'chirildi: {fmt_sum(payment.amount)}"))
+    amount = tx.amount
+    await delete_transaction(session, tx)
+    session.add(OrderEvent(order_id=order.id, user_id=user.id, kind="payment", text=f"To'lov o'chirildi: {fmt_sum(amount)}"))
     await session.commit()
     await publish_order(order)
+    await hub.publish({"type": "finance.update"})
     return {"ok": True}
 
 

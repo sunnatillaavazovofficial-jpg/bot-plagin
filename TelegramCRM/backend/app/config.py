@@ -22,6 +22,7 @@ class Settings:
     tg_api_hash: str
     tg_fake: bool
     fake_interval: int
+    demo_finance: bool
     bot_token: str
     admin_login: str
     admin_password: str
@@ -65,6 +66,7 @@ def get_settings() -> Settings:
         tg_api_hash=os.getenv("TG_API_HASH", ""),
         tg_fake=_bool(os.getenv("TG_FAKE")),
         fake_interval=int(os.getenv("FAKE_INTERVAL", "45") or 45),
+        demo_finance=_bool(os.getenv("DEMO_FINANCE"), default=True),
         bot_token=os.getenv("BOT_TOKEN", ""),
         admin_login=os.getenv("ADMIN_LOGIN", "admin"),
         admin_password=os.getenv("ADMIN_PASSWORD", ""),

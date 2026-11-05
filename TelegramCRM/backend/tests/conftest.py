@@ -11,6 +11,7 @@ async def app(tmp_path, monkeypatch):
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("TG_FAKE", "1")
     monkeypatch.setenv("FAKE_INTERVAL", "0")
+    monkeypatch.setenv("DEMO_FINANCE", "0")
     monkeypatch.setenv("SECRET_KEY", "test-secret")
     monkeypatch.setenv("ADMIN_PASSWORD", "admin123")
     monkeypatch.setenv("BOT_TOKEN", "")
