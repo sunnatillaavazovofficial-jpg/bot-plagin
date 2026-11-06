@@ -54,7 +54,7 @@ Server (VPS) hali bo'lmasa, CRM'ni ofisdagi kompyuterda ishlatish mumkin. Sayt b
 - Telegram ichida ham («CRM» tugmasi).
 
 1. [`KOMPYUTER_SERVER.bat`](KOMPYUTER_SERVER.bat) faylini yuklab oling (GitHub'da «Download raw file») va ikki marta bosing.
-2. Docker Desktop bo'lmasa, skript uni o'rnatadi. Windows ruxsat so'rasa «Ha»ni bosing. O'rnatilgach kompyuterni qayta yoqing va faylni yana ishga tushiring.
+2. Docker Desktop va unga kerakli WSL (Windows uchun Linux qismi) bo'lmasa, skript ularni o'rnatadi. Windows ruxsat so'rasa «Ha»ni bosing. O'rnatilgach kompyuterni bir marta qayta yoqing va faylni yana ishga tushiring.
 3. Skript bir necha savol beradi: admin paroli, bot tokeni, Telegram ID, API ID/HASH. Keyin saytni ishga tushiradi va manzilini ko'rsatadi.
 
 Dastur `%USERPROFILE%\TelegramCRM-server` papkasiga o'rnatiladi. Faylni qayta ishga tushirish xavfsiz: dastur yangilanadi, sozlamalar va ma'lumotlar saqlanadi.

@@ -20,6 +20,7 @@ $Dir = if ($env:CRM_DIR) { $env:CRM_DIR } else { Join-Path $HOME 'TelegramCRM-se
 $ProgramDir = if ($env:ProgramFiles) { $env:ProgramFiles } else { 'C:\Program Files' }
 $DockerExe = "$ProgramDir\Docker\Docker\Docker Desktop.exe"
 $DockerBin = "$ProgramDir\Docker\Docker\resources\bin"
+$WslExe = "$ProgramDir\WSL\wsl.exe"
 $Utf8 = New-Object System.Text.UTF8Encoding $false
 
 $script:EnvPath = Join-Path $Dir '.env'
@@ -186,15 +187,42 @@ function Install-Docker {
     }
   }
   if (-not $ok) { Stop-With 'Docker o''rnatilmadi. Shu oynani rasmga olib yuboring.' }
-  Write-Host ''
   Write-Host 'Docker o''rnatildi.' -ForegroundColor Green
-  Write-Host 'Endi kompyuterni QAYTA YOQING (Restart), so''ng KOMPYUTER_SERVER.bat ni yana ishga tushiring.' -ForegroundColor Yellow
-  exit 0
+}
+
+# Docker Desktop'ga WSL 2 (Windows uchun Linux qismi) kerak. O'rnatilgan bo'lsa $false, hozir o'rnatilsa $true.
+# "wsl --status" ishlatilmaydi: WSL yo'q bo'lsa u "istalgan tugmani bosing" deb kutib qoladi.
+function Ensure-Wsl {
+  if (Test-Path -LiteralPath $WslExe) { return $false }
+  Say 'Windows uchun Linux qismi (WSL) o''rnatilmoqda (5-10 daqiqa)'
+  Note 'Windows ruxsat so''rasa - "Ha" (Yes) ni bosing. Ochilgan oyna o''zi yopilguncha kuting.'
+  $ok = $false
+  try {
+    $proc = Start-Process -FilePath "$env:SystemRoot\System32\wsl.exe" -ArgumentList '--install', '--no-distribution' -Verb RunAs -Wait -PassThru -ErrorAction Stop
+    $ok = ($proc.ExitCode -eq 0) -or (Test-Path -LiteralPath $WslExe)
+  } catch { }
+  if (-not $ok -and (Get-Command winget -ErrorAction SilentlyContinue)) {
+    winget install -e --id Microsoft.WSL --accept-package-agreements --accept-source-agreements | Out-Host
+    $ok = ($LASTEXITCODE -eq 0) -or (Test-Path -LiteralPath $WslExe)
+  }
+  if (-not $ok) { Stop-With 'WSL o''rnatilmadi. Shu oynani rasmga olib yuboring.' }
+  Write-Host 'WSL o''rnatildi.' -ForegroundColor Green
+  return $true
 }
 
 function Ensure-Docker {
   if ((Test-Path -LiteralPath $DockerBin) -and ($env:Path -notlike "*$DockerBin*")) { $env:Path = "$DockerBin;$env:Path" }
-  if (-not (Get-Command docker -ErrorAction SilentlyContinue) -and -not (Test-Path -LiteralPath $DockerExe)) { Install-Docker }
+  $installed = $false
+  if (-not (Get-Command docker -ErrorAction SilentlyContinue) -and -not (Test-Path -LiteralPath $DockerExe)) {
+    Install-Docker
+    $installed = $true
+  }
+  if (Ensure-Wsl) { $installed = $true }
+  if ($installed) {
+    Write-Host ''
+    Write-Host 'Endi kompyuterni QAYTA YOQING (Restart), so''ng KOMPYUTER_SERVER.bat ni yana ishga tushiring.' -ForegroundColor Yellow
+    exit 0
+  }
   if (Test-Engine) { return }
   Say 'Docker Desktop ishga tushirilmoqda (1-3 daqiqa)'
   if (Test-Path -LiteralPath $DockerExe) { Start-Process -FilePath $DockerExe }
@@ -204,7 +232,8 @@ function Ensure-Docker {
   }
   Stop-With ('Docker ishga tushmadi. "Docker Desktop" dasturini oching, chiqqan savollarga javob bering ' +
     '(Accept / Skip), pastki chap burchakda "Engine running" yozuvi chiqqach shu faylni qayta ishga tushiring. ' +
-    'Xato chiqsa - rasmga olib yuboring.')
+    'Xato chiqsa - rasmga olib yuboring. "Virtualization" haqida xato bo''lsa, kompyuter BIOS''ida ' +
+    'virtualizatsiyani (Intel VT-x / AMD SVM) yoqish kerak.')
 }
 
 # ---------------------------------------------------------------- dastur
